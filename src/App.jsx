@@ -5,13 +5,13 @@ import { getDatabase, ref, set, get, onValue } from "firebase/database";
 // ─── Firebase Config ──────────────────────────────────────────────────────────
 // Replace each value below with the matching value from your Firebase console
 const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOUR_apiKey",
-  authDomain: "REPLACE_WITH_YOUR_authDomain",
-  databaseURL: "REPLACE_WITH_YOUR_databaseURL",
-  projectId: "REPLACE_WITH_YOUR_projectId",
-  storageBucket: "REPLACE_WITH_YOUR_storageBucket",
-  messagingSenderId: "REPLACE_WITH_YOUR_messagingSenderId",
-  appId: "REPLACE_WITH_YOUR_appId",
+ apiKey: "AIzaSyClIKmR4FTthxNXtYJZS8Ef6U6RvcvBKGg",
+  authDomain: "mln-betting.firebaseapp.com",
+  databaseURL: "https://mln-betting-default-rtdb.firebaseio.com",
+  projectId: "mln-betting",
+  storageBucket: "mln-betting.firebasestorage.app",
+  messagingSenderId: "444211874873",
+  appId: "1:444211874873:web:599bcdeb815bbcd04d91e8"
 };
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
