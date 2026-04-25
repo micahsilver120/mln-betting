@@ -5,13 +5,13 @@ import { getDatabase, ref, set, get, onValue } from "firebase/database";
 // ─── Firebase Config ──────────────────────────────────────────────────────────
 // Replace each value below with the matching value from your Firebase console
 const firebaseConfig = {
- apiKey: "AIzaSyClIKmR4FTthxNXtYJZS8Ef6U6RvcvBKGg",
-  authDomain: "mln-betting.firebaseapp.com",
-  databaseURL: "https://mln-betting-default-rtdb.firebaseio.com",
-  projectId: "mln-betting",
-  storageBucket: "mln-betting.firebasestorage.app",
-  messagingSenderId: "444211874873",
-  appId: "1:444211874873:web:599bcdeb815bbcd04d91e8"
+  apiKey: "REPLACE_WITH_YOUR_apiKey",
+  authDomain: "REPLACE_WITH_YOUR_authDomain",
+  databaseURL: "REPLACE_WITH_YOUR_databaseURL",
+  projectId: "REPLACE_WITH_YOUR_projectId",
+  storageBucket: "REPLACE_WITH_YOUR_storageBucket",
+  messagingSenderId: "REPLACE_WITH_YOUR_messagingSenderId",
+  appId: "REPLACE_WITH_YOUR_appId",
 };
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
@@ -67,11 +67,19 @@ function leagueMeta(subtitle = "") {
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
+function parseFirebase(val) {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "string") { try { return JSON.parse(val); } catch { return val; } }
+  // Firebase converts arrays to objects — convert back
+  if (typeof val === "object" && !Array.isArray(val)) {
+    const keys = Object.keys(val);
+    const isArray = keys.every(k => !isNaN(k));
+    return isArray ? keys.map(k => val[k]) : val;
+  }
+  return val;
+}
 async function storageGet(key) {
-  try {
-    const snap = await get(ref(db, key));
-    return snap.exists() ? JSON.parse(snap.val()) : null;
-  } catch { return null; }
+  try { const snap = await get(ref(db, key)); return snap.exists() ? parseFirebase(snap.val()) : null; } catch { return null; }
 }
 async function storageSet(key, value) {
   try { await set(ref(db, key), JSON.stringify(value)); } catch {}
@@ -174,23 +182,34 @@ export default function App() {
   const [addMaxBet, setAddMaxBet] = useState("");
   const [futureOptions, setFutureOptions] = useState([{ label: "", odds: "" }, { label: "", odds: "" }]);
 
-  // Real-time Firebase listeners — all users see updates instantly
+  // Load data on mount, then keep in sync with real-time listeners
   useEffect(() => {
-    const unsub = [];
-    let initialLoads = 0;
-    const onLoaded = () => { initialLoads++; if (initialLoads >= 3) setLoading(false); };
+    // Step 1: initial load with get() — reliable, same as before
+    (async () => {
+      const [u, m, b] = await Promise.all([
+        storageGet("mln_users"),
+        storageGet("mln_markets"),
+        storageGet("mln_bets"),
+      ]);
+      if (u) setUsers(u);
+      if (m) setMarkets(m);
+      setBets(Array.isArray(b) ? b : []);
+      setLoading(false);
+    })();
 
-    unsub.push(onValue(ref(db, "mln_users"), snap => {
-      if (snap.exists()) setUsers(JSON.parse(snap.val())); onLoaded();
-    }));
-    unsub.push(onValue(ref(db, "mln_markets"), snap => {
-      if (snap.exists()) setMarkets(JSON.parse(snap.val())); onLoaded();
-    }));
-    unsub.push(onValue(ref(db, "mln_bets"), snap => {
-      setBets(snap.exists() ? JSON.parse(snap.val()) : []); onLoaded();
-    }));
+    // Step 2: real-time listeners for live updates (pauses, odds changes, etc.)
+    const u1 = onValue(ref(db, "mln_users"), snap => {
+      if (snap.exists()) { const v = parseFirebase(snap.val()); if (v) setUsers(v); }
+    }, () => {});
+    const u2 = onValue(ref(db, "mln_markets"), snap => {
+      if (snap.exists()) { const v = parseFirebase(snap.val()); if (v) setMarkets(v); }
+    }, () => {});
+    const u3 = onValue(ref(db, "mln_bets"), snap => {
+      const v = snap.exists() ? parseFirebase(snap.val()) : [];
+      setBets(Array.isArray(v) ? v : []);
+    }, () => {});
 
-    return () => unsub.forEach(u => u());
+    return () => { u1(); u2(); u3(); };
   }, []);
 
   // 30-minute inactivity timeout — kicks back to login so users get fresh data
