@@ -5,7 +5,7 @@ import { getDatabase, ref, set, get, onValue } from "firebase/database";
 // ─── Firebase Config ──────────────────────────────────────────────────────────
 // Replace each value below with the matching value from your Firebase console
 const firebaseConfig = {
- apiKey: "AIzaSyClIKmR4FTthxNXtYJZS8Ef6U6RvcvBKGg",
+  apiKey: "AIzaSyClIKmR4FTthxNXtYJZS8Ef6U6RvcvBKGg",
   authDomain: "mln-betting.firebaseapp.com",
   databaseURL: "https://mln-betting-default-rtdb.firebaseio.com",
   projectId: "mln-betting",
@@ -428,6 +428,40 @@ export default function App() {
     notify("Market settled — winners paid! 💰");
   }
 
+  async function unsettleMarket(marketId) {
+    // Claw back payouts from winners, restore all bets to pending, reopen market
+    const newUsers = { ...users };
+    const newBets = bets.map(b => {
+      if (b.betType === "straight") {
+        if (b.marketId !== marketId) return b;
+        if (b.status === "won") {
+          // Claw back the payout
+          newUsers[b.username] = { ...newUsers[b.username], balance: Math.max(0, (newUsers[b.username]?.balance || 0) - b.payout) };
+        }
+        if (b.status === "won" || b.status === "lost") return { ...b, status: "pending" };
+        return b;
+      }
+      if (b.betType === "parlay") {
+        const hasLeg = b.legs.some(l => l.marketId === marketId);
+        if (!hasLeg) return b;
+        // Only touch parlays that were fully resolved by this market
+        if (b.status === "won") {
+          newUsers[b.username] = { ...newUsers[b.username], balance: Math.max(0, (newUsers[b.username]?.balance || 0) - b.payout) };
+        }
+        // Reset the specific leg and re-evaluate parlay status
+        const newLegs = b.legs.map(l => l.marketId === marketId ? { ...l, status: "pending" } : l);
+        const anyLost = newLegs.some(l => l.status === "lost");
+        const newStatus = anyLost ? "lost" : "pending";
+        return { ...b, legs: newLegs, status: newStatus };
+      }
+      return b;
+    });
+    const reopen = m => m.id === marketId ? { ...m, status: "open", winner: null } : m;
+    const newMarkets = { games: markets.games.map(reopen), futures: markets.futures.map(reopen) };
+    await saveUsers(newUsers); await saveMarkets(newMarkets); await saveBets(newBets);
+    notify("Market reopened — payouts reversed ↩");
+  }
+
   async function voidMarket(marketId) {
     const newUsers = { ...users };
     const newBets = bets.map(b => {
@@ -691,7 +725,16 @@ export default function App() {
                         <div style={S.settleOptions}>
                           {market.options.map(opt => <button key={opt.id} style={S.settleBtn} onClick={() => settleMarket(market.id, opt.id)}>✓ {opt.label}</button>)}
                         </div>
-                      ) : <p style={S.winnerText}>🏆 {market.options.find(o => o.id === market.winner)?.label}</p>}
+                      ) : (
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <p style={S.winnerText}>🏆 {market.options.find(o => o.id === market.winner)?.label}</p>
+                          <button
+                            style={{ ...S.settleBtn, background: "#1a0a1a", borderColor: "#7f1d7f", color: "#e879f9", fontSize: 11, padding: "6px 12px" }}
+                            onClick={() => { if (window.confirm(`Unsettle "${market.title}"? This will reverse all payouts and reopen betting.`)) unsettleMarket(market.id); }}>
+                            ↩ Unsettle
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -702,7 +745,7 @@ export default function App() {
               <div style={S.adminSection}>
                 <p style={S.sectionHead}>ADD NEW MARKET</p>
                 <div style={S.formRow}><label style={S.formLabel}>TYPE</label><div style={S.toggleRow}><button style={{ ...S.toggleBtn, ...(addType === "game" ? S.toggleBtnActive : {}) }} onClick={() => setAddType("game")}>Game</button><button style={{ ...S.toggleBtn, ...(addType === "future" ? S.toggleBtnActive : {}) }} onClick={() => setAddType("future")}>Future</button></div></div>
-                <div style={S.formRow}><label style={S.formLabel}>TITLE</label><input style={S.input} placeholder="e.g. Sea Serpents vs Outbreak" value={addTitle} onChange={e => setAddTitle(e.target.value)} /></div>
+                <div style={S.formRow}><label style={S.formLabel}>TITLE</label><input style={S.input} placeholder="e.g. Aruba Sea Serpents vs Raccoon City Outbreak" value={addTitle} onChange={e => setAddTitle(e.target.value)} /></div>
                 <div style={S.formRow}><label style={S.formLabel}>SUBTITLE <span style={{ color: "#333" }}>(optional)</span></label><input style={S.input} placeholder="e.g. Lunar League · Final" value={addSubtitle} onChange={e => setAddSubtitle(e.target.value)} /></div>
                 <div style={S.formRow}><label style={S.formLabel}>MAX BET <span style={{ color: "#333" }}>(optional)</span></label><input style={S.input} placeholder="e.g. 200" value={addMaxBet} onChange={e => setAddMaxBet(e.target.value)} /></div>
                 {addType === "game" ? (
@@ -913,10 +956,17 @@ export default function App() {
             {leaderboard.length === 0 && <p style={S.emptyText}>No players yet</p>}
             {leaderboard.map(([name, u], i) => {
               const diff = u.balance - STARTING_BALANCE;
+              const pendingAmt = bets
+                .filter(b => b.username === name && b.status === "pending")
+                .reduce((sum, b) => sum + b.stake, 0);
               return (
                 <div key={name} style={{ ...S.boardRow, borderBottom: i < leaderboard.length - 1 ? "1px solid #1a1a24" : "none" }}>
                   <div style={S.boardLeft}><span style={S.boardRank}>#{i + 1}</span><span style={{ ...S.boardName, color: name === username ? "#d4a843" : "#d0d0d0" }}>{name}{name === username ? " · you" : ""}</span></div>
-                  <div style={S.boardRight}><span style={S.boardBal}>${u.balance.toFixed(2)}</span><span style={{ fontSize: 11, color: diff >= 0 ? "#4ade80" : "#f87171" }}>{diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(2)}</span></div>
+                  <div style={S.boardRight}>
+                    <span style={S.boardBal}>${u.balance.toFixed(2)}</span>
+                    <span style={{ fontSize: 11, color: diff >= 0 ? "#4ade80" : "#f87171" }}>{diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(2)}</span>
+                    {pendingAmt > 0 && <span style={{ fontSize: 10, color: "#f59e0b" }}>${pendingAmt.toFixed(0)} in Open Bets</span>}
+                  </div>
                 </div>
               );
             })}
