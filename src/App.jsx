@@ -41,6 +41,30 @@ const INITIAL_MARKETS = {
 const STARTING_BALANCE = 1000;
 const ADMIN_PIN = "543211";
 
+// ─── Banned words ──────────────────────────────────────────────────────────
+const BANNED_WORDS = [
+  "fuck","shit","ass","bitch","cunt","dick","cock","pussy","prick","bastard",
+  "asshole","motherfucker","fucker","bullshit","horseshit","jackass","dumbass",
+  "fatass","smartass","badass","arsehole","arse","twat","slut","whore","fag",
+  "faggot","retard","nigger","nigga","spic","chink","kike","wetback","tranny",
+  "dyke","tits","titties","boobs","boob","nipple","penis","vagina","vulva",
+  "balls","testicle","scrotum","boner","erection","dildo","butthole","anus",
+  "rectum","cum","jizz","sperm","pubic","nutsack","wank","wanker","tosser",
+  "piss","pissed","poop","crap","turd","douchebag","douche","twatwaffle",
+  "shithead","dipshit","goddamn","goddammit","damnit","hell","damned",
+];
+
+function containsBannedWord(str) {
+  const normalized = str.toLowerCase().replace(/[^a-z]/g, "");
+  return BANNED_WORDS.some(w => normalized.includes(w));
+}
+
+// Case-insensitive user lookup — finds the canonical stored key for any casing
+function findUserKey(users, inputName) {
+  const lower = inputName.trim().toLowerCase();
+  return Object.keys(users).find(k => k.toLowerCase() === lower) || null;
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
 const fmt = o => o > 0 ? `+${o}` : `${o}`;
@@ -215,15 +239,29 @@ export default function App() {
   // ── Login ────────────────────────────────────────────────────────────────
 
   function handleNameSubmit() {
-    const name = inputName.trim(); if (!name) return;
+    const raw = inputName.trim(); if (!raw) return;
     setPinInput(""); setPinError("");
-    setLoginStep(users[name] ? "pin_login" : "pin_create");
+    const existingKey = findUserKey(users, raw);
+    if (existingKey) {
+      // Found existing account — update display to canonical casing
+      setInputName(existingKey);
+      setLoginStep("pin_login");
+    } else {
+      // New account — check banned words
+      if (containsBannedWord(raw)) {
+        setPinError(""); 
+        notify("That name contains a word that isn't allowed. Please choose a different name.", "error");
+        return;
+      }
+      setLoginStep("pin_create");
+    }
   }
 
   async function handlePinComplete(pin) {
     const name = inputName.trim();
     if (loginStep === "pin_login") {
-      if (pin === users[name]?.pin) { setUsername(name); setScreen("lobby"); setInputName(""); setLoginStep("name"); setPinInput(""); setPinError(""); }
+      const key = findUserKey(users, name) || name;
+      if (pin === users[key]?.pin) { setUsername(key); setScreen("lobby"); setInputName(""); setLoginStep("name"); setPinInput(""); setPinError(""); }
       else { setPinError("Incorrect PIN — try again"); setPinInput(""); }
       return;
     }
@@ -267,10 +305,24 @@ export default function App() {
   const userBets = bets.filter(b => b.username === username);
 
   // Leaderboard sorted by total (balance + pending stakes)
-  const leaderboard = Object.entries(users).map(([name, u]) => {
+  const leaderboardRaw = Object.entries(users).map(([name, u]) => {
     const pendingAmt = bets.filter(b => b.username === name && b.status === "pending").reduce((s, b) => s + b.stake, 0);
-    return [name, u, pendingAmt, (u.balance || 0) + pendingAmt];
-  }).sort((a, b) => b[3] - a[3]);
+    return { name, u, pendingAmt, total: (u.balance || 0) + pendingAmt };
+  }).sort((a, b) => {
+    if (b.total !== a.total) return b.total - a.total;           // 1. highest total first
+    if (b.pendingAmt !== a.pendingAmt) return b.pendingAmt - a.pendingAmt; // 2. most open bets
+    return a.name.localeCompare(b.name);                          // 3. alphabetical
+  });
+
+  // Assign rank numbers — tied players share the same rank
+  const leaderboard = leaderboardRaw.map((entry, i, arr) => {
+    const rank = i === 0 ? 1 : (entry.total === arr[i-1].total ? arr[i-1]._rank : i + 1);
+    return { ...entry, _rank: rank };
+  });
+
+  // Split into active bettors vs no-bets-yet
+  const activePlayers = leaderboard.filter(p => bets.some(b => b.username === p.name));
+  const inactivePlayers = leaderboard.filter(p => !bets.some(b => b.username === p.name));
 
   const displayMarkets = activeTab === "games" ? markets.games : markets.futures;
 
@@ -286,6 +338,41 @@ export default function App() {
     const totalPaid = relevant.filter(b => b.status === "won").reduce((s, b) => s + b.payout, 0);
     const betCount = relevant.length;
     return { totalStaked, totalPaid, net: totalStaked - totalPaid, betCount };
+  }
+
+  // Project house P&L if a specific option wins — honors original bet odds
+  function getOptionProjection(marketId, winningOptionId) {
+    const relevant = bets.filter(b => {
+      if (b.status === "voided") return false;
+      if (b.betType === "straight") return b.marketId === marketId && b.status === "pending";
+      if (b.betType === "parlay") return b.legs.some(l => l.marketId === marketId) && b.status === "pending";
+      return false;
+    });
+    let totalStaked = 0;
+    let totalPayout = 0;
+    for (const b of relevant) {
+      totalStaked += b.stake;
+      if (b.betType === "straight") {
+        if (b.optionId === winningOptionId) totalPayout += b.payout; // pays out at locked-in odds
+      } else if (b.betType === "parlay") {
+        // For parlay: if this leg would lose, parlay busts (no payout)
+        // If this leg would win, check if all other legs already resolved won
+        const thisLeg = b.legs.find(l => l.marketId === marketId);
+        if (thisLeg?.optionId !== winningOptionId) {
+          // This leg loses — parlay busts, house keeps stake (already counted in totalStaked)
+        } else {
+          // This leg wins — check other legs
+          const otherLegs = b.legs.filter(l => l.marketId !== marketId);
+          const otherAllWon = otherLegs.every(l => l.status === "won");
+          const otherAnyLost = otherLegs.some(l => l.status === "lost");
+          if (otherAllWon) totalPayout += b.payout;
+          // if otherAnyLost: parlay already busted, no payout
+          // if other legs still pending: we conservatively assume they'll win (worst case for house)
+          else if (!otherAnyLost) totalPayout += b.payout;
+        }
+      }
+    }
+    return { totalStaked, totalPayout, net: totalStaked - totalPayout };
   }
 
   const houseTotalNet = allMarkets
@@ -623,10 +710,10 @@ export default function App() {
                     </button>
                   </div>
                   {leaderboard.length === 0 && <p style={S.emptyText}>No players yet</p>}
-                  {leaderboard.map(([name, u, pendingAmt], i) => (
+                  {leaderboard.map(({ name, u, pendingAmt, _rank }) => (
                     <div key={name}>
                       <div style={S.leaderRow}>
-                        <span style={S.leaderRank}>#{i + 1}</span>
+                        <span style={S.leaderRank}>#{_rank}</span>
                         <span style={S.leaderName}>{name}</span>
                         <span style={S.leaderBal}>${u.balance.toFixed(2)}</span>
                         <button style={{ ...S.adjustBtn, fontSize: 10, padding: "4px 8px" }} onClick={() => notify(`${name}'s PIN: ${u.pin || "none"}`, "success")}>PIN</button>
@@ -672,17 +759,25 @@ export default function App() {
                             {market.options.map(opt => {
                               const amt = optionTotals[opt.id] || 0;
                               const pct = mTotal > 0 ? amt / mTotal : 0;
+                              const proj = getOptionProjection(market.id, opt.id);
+                              const projNet = proj.net;
                               return (
-                                <div key={opt.id} style={{ marginBottom: 4 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#8a9ab0", marginBottom: 2 }}>
-                                    <span>{opt.label} <span style={{ color: "#d4a843" }}>{fmt(opt.odds)}</span></span>
-                                    <span>${amt.toFixed(0)} · {Math.round(pct * 100)}%</span>
+                                <div key={opt.id} style={{ marginBottom: 8, background: "#0a0c10", borderRadius: 6, padding: "7px 10px" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#8a9ab0", marginBottom: 4 }}>
+                                    <span style={{ fontWeight: 700, color: "#c8d0dc" }}>{opt.label}</span>
+                                    <span style={{ color: "#d4a843" }}>{fmt(opt.odds)}</span>
+                                  </div>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#8a9ab0", marginBottom: 4 }}>
+                                    <span>Action: ${amt.toFixed(0)} ({Math.round(pct * 100)}%)</span>
+                                    <span style={{ fontWeight: 700, color: projNet >= 0 ? "#4ade80" : "#f87171" }}>
+                                      If wins: {projNet >= 0 ? "+" : ""}${projNet.toFixed(2)} house
+                                    </span>
                                   </div>
                                   <div style={S.moneyBar}><div style={{ ...S.moneyBarFill, width: `${pct * 100}%`, background: "#58a6ff" }} /></div>
                                 </div>
                               );
                             })}
-                            <div style={{ fontSize: 10, color: "#2e3a4e", marginTop: 4 }}>Total action: ${mTotal.toFixed(0)}</div>
+                            <div style={{ fontSize: 10, color: "#2e3a4e", marginTop: 2 }}>Total action: ${mTotal.toFixed(0)}</div>
                           </div>
                         )}
 
@@ -954,27 +1049,55 @@ export default function App() {
         )}
 
         {activeTab === "leaderboard" && (
-          <div style={S.marketCard}>
-            <h3 style={S.marketTitle}>Standings</h3>
-            <p style={S.marketSub}>Starting balance ${STARTING_BALANCE.toLocaleString()}</p>
-            {leaderboard.length === 0 && <p style={S.emptyText}>No players yet</p>}
-            {leaderboard.map(([name, u, pendingAmt, total], i) => {
-              const diff = total - STARTING_BALANCE;
-              return (
-                <div key={name} style={{ ...S.boardRow, borderBottom: i < leaderboard.length - 1 ? "1px solid #1a1a24" : "none" }}>
-                  <div style={S.boardLeft}><span style={S.boardRank}>#{i + 1}</span><span style={{ ...S.boardName, color: name === username ? "#d4a843" : "#d0d0d0" }}>{name}{name === username ? " · you" : ""}</span></div>
-                  <div style={S.boardRight}>
-                    <span style={S.boardBal}>${total.toFixed(2)}</span>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{ fontSize: 10, color: "#4ade80" }}>${u.balance.toFixed(0)} cash</span>
-                      {pendingAmt > 0 && <span style={{ fontSize: 10, color: "#f59e0b" }}>${pendingAmt.toFixed(0)} in Open Bets</span>}
+          <>
+            <div style={S.marketCard}>
+              <h3 style={S.marketTitle}>Standings</h3>
+              <p style={S.marketSub}>Starting balance ${STARTING_BALANCE.toLocaleString()}</p>
+              {activePlayers.length === 0 && <p style={S.emptyText}>No bets placed yet.</p>}
+              {activePlayers.map(({ name, u, pendingAmt, total, _rank }, i) => {
+                const diff = total - STARTING_BALANCE;
+                const isLast = i === activePlayers.length - 1;
+                const prevTied = i > 0 && activePlayers[i-1]._rank === _rank;
+                const nextTied = !isLast && activePlayers[i+1]._rank === _rank;
+                const isTied = prevTied || nextTied;
+                return (
+                  <div key={name} style={{ ...S.boardRow, borderBottom: !isLast ? "1px solid #1a1a24" : "none" }}>
+                    <div style={S.boardLeft}>
+                      <span style={{ ...S.boardRank, fontSize: 15, color: "#ffffff", width: 32, fontWeight: 700 }}>
+                        {isTied ? `T${_rank}` : `#${_rank}`}
+                      </span>
+                      <span style={{ ...S.boardName, color: name === username ? "#d4a843" : "#d0d0d0" }}>{name}{name === username ? " · you" : ""}</span>
                     </div>
-                    <span style={{ fontSize: 11, color: diff >= 0 ? "#4ade80" : "#f87171" }}>{diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(2)}</span>
+                    <div style={S.boardRight}>
+                      <span style={S.boardBal}>${total.toFixed(2)}</span>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ fontSize: 10, color: "#4ade80" }}>${u.balance.toFixed(0)} cash</span>
+                        {pendingAmt > 0 && <span style={{ fontSize: 10, color: "#f59e0b" }}>${pendingAmt.toFixed(0)} in Open Bets</span>}
+                      </div>
+                      <span style={{ fontSize: 11, color: diff >= 0 ? "#4ade80" : "#f87171" }}>{diff >= 0 ? "▲" : "▼"} ${Math.abs(diff).toFixed(2)}</span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            {inactivePlayers.length > 0 && (
+              <div style={{ ...S.marketCard, opacity: 0.6 }}>
+                <p style={{ fontSize: 9, letterSpacing: 2, color: "#3a4a5a", fontWeight: 700, margin: "0 0 12px" }}>PLAYERS WHO HAVE NOT MADE BETS</p>
+                {inactivePlayers.map(({ name, u }, i) => (
+                  <div key={name} style={{ ...S.boardRow, borderBottom: i < inactivePlayers.length - 1 ? "1px solid #1a1a24" : "none" }}>
+                    <div style={S.boardLeft}>
+                      <span style={{ ...S.boardRank, fontSize: 15, color: "#3a4a5a", width: 32 }}>—</span>
+                      <span style={{ ...S.boardName, color: name === username ? "#d4a843" : "#555" }}>{name}{name === username ? " · you" : ""}</span>
+                    </div>
+                    <div style={S.boardRight}>
+                      <span style={{ ...S.boardBal, color: "#555" }}>${u.balance.toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         )}
 
         {activeTab === "mybets" && (
