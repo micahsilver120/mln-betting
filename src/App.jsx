@@ -1,29 +1,20 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, onValue } from "firebase/database";
 
-//  Fonts 
-if (typeof document !== "undefined" && !document.getElementById("mln-f")) {
-  const l = document.createElement("link"); l.id = "mln-f"; l.rel = "stylesheet";
-  const b = "https://fonts.googleapis.com/css2";
-  const q = "?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap";
-  l.href = b + q; document.head.appendChild(l);
+//  Font injection 
+if (typeof document !== "undefined" && !document.getElementById("mln-fonts")) {
+  const link = document.createElement("link");
+  const fontBase = "https://fonts.googleapis.com/css2";
+  const fontQuery = "?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap";
+  link.id = "mln-fonts";
+  link.rel = "stylesheet";
+  link.href = fontBase + fontQuery;
+  document.head.appendChild(link);
 }
 
-//  Icons (pure ASCII unicode escapes) 
-const I = {
-  ball:    "\u26BE", home:    "\uD83C\uDFE0", stadium: "\uD83C\uDFDF",
-  trophy:  "\uD83C\uDFC6", medal:   "\uD83C\uDFC5", crystal: "\uD83D\uDD2E",
-  eye:     "\uD83D\uDC41",  noSee:   "\uD83D\uDE48", money:   "\uD83D\uDCB0",
-  scales:  "\u2696\uFE0F",  people:  "\uD83D\uDC65", clipboard:"\uD83D\uDCCB",
-  pencil:  "\u270F\uFE0F",  plus:    "\u2795",        warn:    "\u26A0\uFE0F",
-  pause:   "\u23F8\uFE0F",  play:    "\u25B6\uFE0F",  ok:      "\u2705",
-  check:   "\u2713",        cross:   "\u2717",         undo:    "\u21A9",
-  pending: "\u23F3",        back:    "\u232B",
-};
-
-//  Firebase 
-const fbCfg = {
+//  Firebase Config 
+const firebaseConfig = {
   apiKey: "AIzaSyClIKmR4FTthxNXtYJZS8Ef6U6RvcvBKGg",
   authDomain: "mln-betting.firebaseapp.com",
   databaseURL: "https://mln-betting-default-rtdb.firebaseio.com",
@@ -32,104 +23,125 @@ const fbCfg = {
   messagingSenderId: "444211874873",
   appId: "1:444211874873:web:599bcdeb815bbcd04d91e8",
 };
-const fbApp = initializeApp(fbCfg);
-const db = getDatabase(fbApp);
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
 
-//  Constants 
-const START_BAL = 1000;
-const ADMIN_PIN = "543211";
-const BANNED = ["fuck","shit","ass","bitch","cunt","dick","cock","pussy","prick",
-  "bastard","asshole","motherfucker","fucker","bullshit","jackass","dumbass",
-  "twat","slut","whore","fag","faggot","retard","nigger","nigga","spic",
-  "chink","kike","tranny","dyke","tits","titties","boobs","penis","vagina",
-  "balls","testicle","scrotum","boner","dildo","butthole","anus","rectum",
-  "cum","jizz","sperm","wank","wanker","piss","poop","crap","turd","douche",
-  "dipshit","goddamn","damnit"];
+//  Data 
 
-const INIT_MARKETS = {
+const INITIAL_MARKETS = {
   games: [
-    { id:"lsf1",type:"game",title:"Aruba Sea Serpents vs Humongous Melonheads",subtitle:"Lunar League - Semifinal",status:"open",winner:null,maxBet:null,options:[{id:"lsf1_ss",label:"Aruba Sea Serpents",odds:-225},{id:"lsf1_mel",label:"Humongous Melonheads",odds:180}]},
-    { id:"lsf2",type:"game",title:"Raccoon City Outbreak vs Sopher McDophers",subtitle:"Lunar League - Semifinal",status:"open",winner:null,maxBet:null,options:[{id:"lsf2_out",label:"Raccoon City Outbreak",odds:-110},{id:"lsf2_mcd",label:"Sopher McDophers",odds:-111}]},
-    { id:"gsf1",type:"game",title:"Gas House Gorillas vs Sunnydale Slayers",subtitle:"Galactic League - Semifinal",status:"open",winner:null,maxBet:null,options:[{id:"gsf1_gor",label:"Gas House Gorillas",odds:-200},{id:"gsf1_sla",label:"Sunnydale Slayers",odds:161}]},
-    { id:"gsf2",type:"game",title:"Ursa Major Grizzlies vs R'lyeh Ancients",subtitle:"Galactic League - Semifinal",status:"open",winner:null,maxBet:null,options:[{id:"gsf2_gri",label:"Ursa Major Grizzlies",odds:-101},{id:"gsf2_anc",label:"R'lyeh Ancients",odds:-121}]},
+    { id: "lsf1", type: "game", title: "Aruba Sea Serpents vs Humongous Melonheads", subtitle: "Lunar League - Semifinal", status: "open", winner: null, maxBet: null,
+      options: [{ id: "lsf1_ss", label: "Aruba Sea Serpents", odds: -225 }, { id: "lsf1_mel", label: "Humongous Melonheads", odds: +180 }] },
+    { id: "lsf2", type: "game", title: "Raccoon City Outbreak vs Sopher McDophers", subtitle: "Lunar League - Semifinal", status: "open", winner: null, maxBet: null,
+      options: [{ id: "lsf2_out", label: "Raccoon City Outbreak", odds: -110 }, { id: "lsf2_mcd", label: "Sopher McDophers", odds: -111 }] },
+    { id: "gsf1", type: "game", title: "Gas House Gorillas vs Sunnydale Slayers", subtitle: "Galactic League - Semifinal", status: "open", winner: null, maxBet: null,
+      options: [{ id: "gsf1_gor", label: "Gas House Gorillas", odds: -200 }, { id: "gsf1_sla", label: "Sunnydale Slayers", odds: +161 }] },
+    { id: "gsf2", type: "game", title: "Ursa Major Grizzlies vs R'lyeh Ancients", subtitle: "Galactic League - Semifinal", status: "open", winner: null, maxBet: null,
+      options: [{ id: "gsf2_gri", label: "Ursa Major Grizzlies", odds: -101 }, { id: "gsf2_anc", label: "R'lyeh Ancients", odds: -121 }] },
   ],
   futures: [
-    { id:"lunar_champ",type:"future",title:"Lunar League Champion",subtitle:"Season Future",status:"open",winner:null,maxBet:null,options:[{id:"lc_ss",label:"Aruba Sea Serpents",odds:165},{id:"lc_mcd",label:"Sopher McDophers",odds:273},{id:"lc_out",label:"Raccoon City Outbreak",odds:274},{id:"lc_mel",label:"Humongous Melonheads",odds:631}]},
-    { id:"galactic_champ",type:"future",title:"Galactic League Champion",subtitle:"Season Future",status:"open",winner:null,maxBet:null,options:[{id:"gc_gor",label:"Gas House Gorillas",odds:178},{id:"gc_anc",label:"R'lyeh Ancients",odds:251},{id:"gc_gri",label:"Ursa Major Grizzlies",odds:298},{id:"gc_sla",label:"Sunnydale Slayers",odds:549}]},
-    { id:"toos",type:"future",title:"ToOS Winner",subtitle:"Championship Future",status:"open",winner:null,maxBet:null,options:[{id:"toos_ss",label:"Aruba Sea Serpents",odds:340},{id:"toos_gor",label:"Gas House Gorillas",odds:476},{id:"toos_mcd",label:"Sopher McDophers",odds:571},{id:"toos_out",label:"Raccoon City Outbreak",odds:573},{id:"toos_anc",label:"R'lyeh Ancients",odds:674},{id:"toos_gri",label:"Ursa Major Grizzlies",odds:820},{id:"toos_mel",label:"Humongous Melonheads",odds:1570},{id:"toos_sla",label:"Sunnydale Slayers",odds:1753}]},
+    { id: "lunar_champ", type: "future", title: "Lunar League Champion", subtitle: "Season Future", status: "open", winner: null, maxBet: null,
+      options: [{ id: "lc_ss", label: "Aruba Sea Serpents", odds: +165 }, { id: "lc_mcd", label: "Sopher McDophers", odds: +273 }, { id: "lc_out", label: "Raccoon City Outbreak", odds: +274 }, { id: "lc_mel", label: "Humongous Melonheads", odds: +631 }] },
+    { id: "galactic_champ", type: "future", title: "Galactic League Champion", subtitle: "Season Future", status: "open", winner: null, maxBet: null,
+      options: [{ id: "gc_gor", label: "Gas House Gorillas", odds: +178 }, { id: "gc_anc", label: "R'lyeh Ancients", odds: +251 }, { id: "gc_gri", label: "Ursa Major Grizzlies", odds: +298 }, { id: "gc_sla", label: "Sunnydale Slayers", odds: +549 }] },
+    { id: "toos", type: "future", title: "ToOS Winner", subtitle: "Championship Future", status: "open", winner: null, maxBet: null,
+      options: [{ id: "toos_ss", label: "Aruba Sea Serpents", odds: +340 }, { id: "toos_gor", label: "Gas House Gorillas", odds: +476 }, { id: "toos_mcd", label: "Sopher McDophers", odds: +571 }, { id: "toos_out", label: "Raccoon City Outbreak", odds: +573 }, { id: "toos_anc", label: "R'lyeh Ancients", odds: +674 }, { id: "toos_gri", label: "Ursa Major Grizzlies", odds: +820 }, { id: "toos_mel", label: "Humongous Melonheads", odds: +1570 }, { id: "toos_sla", label: "Sunnydale Slayers", odds: +1753 }] },
   ],
 };
 
-//  Helpers 
-const fmt = o => o > 0 ? `+${o}` : `${o}`;
-const toWin = (s,o) => o > 0 ? s*o/100 : s*100/Math.abs(o);
-const calcPay = (s,o) => s + toWin(s,o);
-const uid = () => Math.random().toString(36).slice(2,9);
-const fmtDate = ts => new Date(ts).toLocaleDateString("en-US",{month:"short",day:"numeric"});
-const toDecimal = o => o > 0 ? o/100+1 : 100/Math.abs(o)+1;
-const combineOdds = legs => {
-  const d = legs.reduce((a,l)=>a*toDecimal(l.odds),1);
-  return d>=2 ? Math.round((d-1)*100) : Math.round(-100/(d-1));
-};
-const hasBanned = str => {
-  const n = str.toLowerCase().replace(/[^a-z]/g,"");
-  return BANNED.some(w => n.includes(w));
-};
-const findUser = (users, name) =>
-  Object.keys(users).find(k=>k.toLowerCase()===name.trim().toLowerCase())||null;
-const leagueMeta = sub => {
-  const s = (sub||"").toLowerCase();
-  if (s.includes("lunar")) return {tag:"LUNAR",color:"#60a5fa",bg:"rgba(96,165,250,0.1)"};
-  if (s.includes("galactic")) return {tag:"GALACTIC",color:"#a78bfa",bg:"rgba(167,139,250,0.1)"};
-  if (s.includes("toos")||s.includes("championship")) return {tag:"ToOS",color:"#fbbf24",bg:"rgba(251,191,36,0.1)"};
-  return {tag:"FUTURE",color:"#6b7280",bg:"rgba(107,114,128,0.1)"};
-};
-const getBase = title => title.replace(/ - Spread$/,"").replace(/ - O\/U [\d.]+$/,"");
+const STARTING_BALANCE = 1000;
+const ADMIN_PIN = "543211";
 
-//  Firebase storage 
-function fbParse(v) {
-  if (v===null||v===undefined) return null;
-  if (typeof v==="string") { try { return JSON.parse(v); } catch { return v; } }
-  if (typeof v==="object"&&!Array.isArray(v)) {
-    const ks=Object.keys(v);
-    return ks.length>0&&ks.every(k=>!isNaN(k)) ? ks.map(k=>v[k]) : v;
-  }
-  return v;
+//  Banned words 
+const BANNED_WORDS = [
+  "fuck","shit","ass","bitch","cunt","dick","cock","pussy","prick","bastard",
+  "asshole","motherfucker","fucker","bullshit","horseshit","jackass","dumbass",
+  "fatass","smartass","badass","arsehole","arse","twat","slut","whore","fag",
+  "faggot","retard","nigger","nigga","spic","chink","kike","wetback","tranny",
+  "dyke","tits","titties","boobs","boob","nipple","penis","vagina","vulva",
+  "balls","testicle","scrotum","boner","erection","dildo","butthole","anus",
+  "rectum","cum","jizz","sperm","pubic","nutsack","wank","wanker","tosser",
+  "piss","pissed","poop","crap","turd","douchebag","douche","twatwaffle",
+  "shithead","dipshit","goddamn","goddammit","damnit","hell","damned",
+];
+
+function containsBannedWord(str) {
+  const normalized = str.toLowerCase().replace(/[^a-z]/g, "");
+  return BANNED_WORDS.some(w => normalized.includes(w));
 }
-const fbGet = async key => { try { const s=await get(ref(db,key)); return s.exists()?fbParse(s.val()):null; } catch { return null; } };
-const fbSet = async (key,val) => { try { await set(ref(db,key),JSON.stringify(val)); } catch {} };
 
-//  PinPad 
+// Case-insensitive user lookup  finds the canonical stored key for any casing
+function findUserKey(users, inputName) {
+  const lower = inputName.trim().toLowerCase();
+  return Object.keys(users).find(k => k.toLowerCase() === lower) || null;
+}
+
+//  Helpers 
+
+const fmt = o => o > 0 ? `+${o}` : `${o}`;
+const toDecimal = o => o > 0 ? o / 100 + 1 : 100 / Math.abs(o) + 1;
+const toWin = (stake, odds) => odds > 0 ? stake * odds / 100 : stake * 100 / Math.abs(odds);
+const calcPayout = (stake, odds) => stake + toWin(stake, odds);
+const uid = () => Math.random().toString(36).slice(2, 9);
+const fmtTime = ts => {
+  const d = new Date(ts);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) + " - " +
+    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+};
+function combinedAmericanOdds(legs) {
+  const dec = legs.reduce((acc, l) => acc * toDecimal(l.odds), 1);
+  return dec >= 2 ? Math.round((dec - 1) * 100) : Math.round(-100 / (dec - 1));
+}
+function leagueMeta(subtitle = "") {
+  if (subtitle.toLowerCase().includes("lunar")) return { tag: "LUNAR", color: "#3b82f6", bg: "rgba(88,166,255,0.08)" };
+  if (subtitle.toLowerCase().includes("galactic")) return { tag: "GALACTIC", color: "#8b5cf6", bg: "rgba(188,140,255,0.08)" };
+  if (subtitle.toLowerCase().includes("toos") || subtitle.toLowerCase().includes("championship")) return { tag: "ToOS", color: "#6366f1", bg: "rgba(212,168,67,0.08)" };
+  return { tag: "FUTURE", color: "#94a3b8", bg: "transparent" };
+}
+
+//  Storage 
+
+function parseFirebase(val) {
+  if (val === null || val === undefined) return null;
+  if (typeof val === "string") { try { return JSON.parse(val); } catch { return val; } }
+  if (typeof val === "object" && !Array.isArray(val)) {
+    const keys = Object.keys(val);
+    const isArray = keys.length > 0 && keys.every(k => !isNaN(k));
+    return isArray ? keys.map(k => val[k]) : val;
+  }
+  return val;
+}
+async function storageGet(key) {
+  try { const snap = await get(ref(db, key)); return snap.exists() ? parseFirebase(snap.val()) : null; } catch { return null; }
+}
+async function storageSet(key, value) {
+  try { await set(ref(db, key), JSON.stringify(value)); } catch {}
+}
+
+//  PIN Pad 
+
 function PinPad({ value, onChange, label, sublabel, error }) {
-  const KEYS = ["1","2","3","4","5","6","7","8","9","","0",I.back];
-  const press = k => {
-    if (k===I.back) { onChange(value.slice(0,-1)); return; }
-    if (k===""||value.length>=4) return;
-    onChange(value+k);
-  };
+  const keys = ["1","2","3","4","5","6","7","8","9","","0","\u232B"];
+  function press(k) {
+    if (k === "\u232B") { onChange(value.slice(0, -1)); return; }
+    if (k === "" || value.length >= 4) return;
+    onChange(value + k);
+  }
   return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:18}}>
-      <div style={{textAlign:"center"}}>
-        <div style={{fontSize:13,color:"#9ca3af",marginBottom:3}}>{label}</div>
-        {sublabel&&<div style={{fontSize:11,color:"#4b5563"}}>{sublabel}</div>}
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+      <div>
+        <p style={{ margin: "0 0 4px", fontSize: 14.0, color: "#64748b", textAlign: "center" }}>{label}</p>
+        {sublabel && <p style={{ margin: 0, fontSize: 12.0, color: "#94a3b8", textAlign: "center" }}>{sublabel}</p>}
       </div>
-      <div style={{display:"flex",gap:14}}>
-        {[0,1,2,3].map(i=>(
-          <div key={i} style={{width:13,height:13,borderRadius:"50%",
-            background:i<value.length?"#60a5fa":"transparent",
-            border:`2px solid ${i<value.length?"#60a5fa":error?"#ef4444":"#374151"}`,
-            transition:"all 0.15s"}}/>
+      <div style={{ display: "flex", gap: 16 }}>
+        {[0,1,2,3].map(i => (
+          <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: i < value.length ? "#6366f1" : "transparent", border: `2px solid ${i < value.length ? "#6366f1" : error ? "#ef4444" : "#e2e8f0"}`, transition: "all 0.15s" }} />
         ))}
       </div>
-      {error&&<div style={{fontSize:11,color:"#ef4444",marginTop:-8}}>{error}</div>}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:9,width:195}}>
-        {KEYS.map((k,i)=>(
-          <button key={i} onMouseDown={e=>{e.preventDefault();press(k);}}
-            style={{height:52,background:k===""?"transparent":"#1f2937",
-              border:k===""?"none":"1px solid #374151",borderRadius:10,
-              color:"#f9fafb",fontSize:k===I.back?16:19,fontWeight:600,
-              cursor:k===""?"default":"pointer",fontFamily:"inherit",
-              pointerEvents:k===""?"none":"auto"}}>
+      {error && <p style={{ margin: "-10px 0 -6px", fontSize: 12.0, color: "#ef4444", textAlign: "center" }}>{error}</p>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, width: 200 }}>
+        {keys.map((k, i) => (
+          <button key={i} onClick={() => press(k)} style={{ height: 54, background: k === "" ? "transparent" : "#ffffff", border: k === "" ? "none" : "1px solid #e2e8f0", borderRadius: 12, color: k === "\u232B" ? "#94a3b8" : "#1e293b", fontSize: k === "\u232B" ? 18 : 20, fontWeight: 600, cursor: k === "" ? "default" : "pointer", fontFamily: "'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", pointerEvents: k === "" ? "none" : "auto" }}>
             {k}
           </button>
         ))}
@@ -138,735 +150,940 @@ function PinPad({ value, onChange, label, sublabel, error }) {
   );
 }
 
-//  Combobox 
-function Combo({ value, onChange, options, placeholder, style }) {
-  const [open,setOpen]=useState(false);
-  const [q,setQ]=useState("");
-  const ref2=useRef(null);
-  useEffect(()=>{
-    const h=e=>{ if(ref2.current&&!ref2.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown",h);
-    return ()=>document.removeEventListener("mousedown",h);
-  },[]);
-  const filtered=options.filter(o=>o.toLowerCase().includes(q.toLowerCase())).slice(0,8);
-  return (
-    <div ref={ref2} style={{position:"relative",...style}}>
-      <input value={open?q:value}
-        onChange={e=>{setQ(e.target.value);onChange("");setOpen(true);}}
-        onFocus={()=>{setQ("");setOpen(true);}}
-        placeholder={placeholder} style={S.inp} autoComplete="off"/>
-      {open&&filtered.length>0&&(
-        <div style={{position:"absolute",top:"calc(100% + 4px)",left:0,right:0,
-          background:"#1f2937",border:"1px solid #374151",borderRadius:10,
-          boxShadow:"0 8px 24px rgba(0,0,0,0.4)",zIndex:100,overflow:"hidden"}}>
-          {filtered.map(o=>(
-            <div key={o} onMouseDown={()=>{onChange(o);setQ("");setOpen(false);}}
-              style={{padding:"9px 14px",fontSize:13,cursor:"pointer",color:"#f9fafb",
-                background:o===value?"#1d4ed8":"transparent",fontWeight:o===value?600:400}}>
-              {o}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-//  Toast 
-function Toast({ n }) {
-  return (
-    <div style={{position:"fixed",bottom:90,left:"50%",transform:"translateX(-50%)",
-      background:n.type==="error"?"#7f1d1d":"#14532d",
-      border:`1px solid ${n.type==="error"?"#991b1b":"#166534"}`,
-      color:n.type==="error"?"#fca5a5":"#86efac",
-      borderRadius:50,padding:"11px 26px",fontSize:13,fontWeight:700,
-      zIndex:200,whiteSpace:"nowrap",boxShadow:"0 8px 32px rgba(0,0,0,0.5)"}}>
-      {n.msg}
-    </div>
-  );
-}
-
 //  App 
-export default function App() {
-  const [loading,setLoading]=useState(true);
-  const [screen,setScreen]=useState("login");  // login | lobby | admin
-  const [notif,setNotif]=useState(null);
 
-  // Firebase state
-  const [users,setUsers]=useState({});
-  const [markets,setMarkets]=useState(INIT_MARKETS);
-  const [bets,setBets]=useState([]);
-  const [lbVisible,setLbVisible]=useState(true);
-  const [headerMsg,setHeaderMsg]=useState("");
-  const [siteMax,setSiteMax]=useState(null);
+export default function App() {
+  const [screen, setScreen] = useState("login");
+  const [username, setUsername] = useState("");
+  const [users, setUsers] = useState({});
+  const [markets, setMarkets] = useState(INITIAL_MARKETS);
+  const [bets, setBets] = useState([]);
+  const [headerMsg, setHeaderMsg] = useState("");
+  const [leaderboardVisible, setLeaderboardVisible] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState(null);
 
   // Login
-  const [inputName,setInputName]=useState("");
-  const [loginStep,setLoginStep]=useState("name");
-  const [pinVal,setPinVal]=useState("");
-  const [pendingPin,setPendingPin]=useState("");
-  const [pinErr,setPinErr]=useState("");
-  const [username,setUsername]=useState("");
+  const [inputName, setInputName] = useState("");
+  const [loginStep, setLoginStep] = useState("name");
+  const [pinInput, setPinInput] = useState("");
+  const [pendingPin, setPendingPin] = useState("");
+  const [pinError, setPinError] = useState("");
 
   // Lobby
-  const [tab,setTab]=useState("games");
-  const [slip,setSlip]=useState({});
-  const [slipMode,setSlipMode]=useState("straight");
-  const [parlayStake,setParlayStake]=useState("");
+  const [betSlip, setBetSlip] = useState({});
+  const [slipMode, setSlipMode] = useState("straight");
+  const [parlayStake, setParlayStake] = useState("");
+  const [activeTab, setActiveTab] = useState("games");
+  const [gamesFilter, setGamesFilter] = useState("open"); // "open" | "resolved"
 
   // Admin
-  const [adminTab,setAdminTab]=useState("settle");
-  const [adminPin,setAdminPin]=useState("");
-  const [adminOk,setAdminOk]=useState(false);
-  const [expandedPnl,setExpandedPnl]=useState(null);
-  const [adjUser,setAdjUser]=useState(null);
-  const [adjAmt,setAdjAmt]=useState("");
-  const [editingMkt,setEditingMkt]=useState(null);
-  const [editTitle,setEditTitle]=useState("");
-  const [editSub,setEditSub]=useState("");
-  const [editOpts,setEditOpts]=useState([]);
-  const [editMax,setEditMax]=useState("");
-  const [addType,setAddType]=useState("game");
-  const [aTitle,setATitle]=useState(""); const [aSub,setASub]=useState("");
-  const [aA,setAA]=useState(""); const [aOddsA,setAOddsA]=useState("");
-  const [aB,setAB]=useState(""); const [aOddsB,setAOddsB]=useState("");
-  const [aSpread,setASpread]=useState(""); const [aSpOddsA,setASpOddsA]=useState("-110"); const [aSpOddsB,setASpOddsB]=useState("-110");
-  const [aOU,setAOU]=useState(""); const [aOvOdds,setAOvOdds]=useState("-110"); const [aUnOdds,setAUnOdds]=useState("-110");
-  const [aMax,setAMax]=useState("");
-  const [futOpts,setFutOpts]=useState([{label:"",odds:""},{label:"",odds:""}]);
-  const [bannerDraft,setBannerDraft]=useState("");
-  const [siteMaxDraft,setSiteMaxDraft]=useState("");
+  const [adminTab, setAdminTab] = useState("settle");
+  const [adminPin, setAdminPin] = useState("");
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [editingMarket, setEditingMarket] = useState(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editSubtitle, setEditSubtitle] = useState("");
+  const [editOptions, setEditOptions] = useState([]);
+  const [editMaxBet, setEditMaxBet] = useState("");
+  const [adjustingUser, setAdjustingUser] = useState(null);
+  const [adjustAmt, setAdjustAmt] = useState("");
+  const [addType, setAddType] = useState("game");
+  const [addTitle, setAddTitle] = useState("");
+  const [addSubtitle, setAddSubtitle] = useState("");
+  const [addTeamA, setAddTeamA] = useState("");
+  const [addOddsA, setAddOddsA] = useState("");
+  const [addTeamB, setAddTeamB] = useState("");
+  const [addOddsB, setAddOddsB] = useState("");
+  const [addMaxBet, setAddMaxBet] = useState("");
+  const [futureOptions, setFutureOptions] = useState([{ label: "", odds: "" }, { label: "", odds: "" }]);
+  const [headerDraft, setHeaderDraft] = useState("");
+  const [expandedSettled, setExpandedSettled] = useState(null);
+  const [siteMaxBet, setSiteMaxBet] = useState(null);
+  const [siteMaxBetDraft, setSiteMaxBetDraft] = useState("");
+  // Add game form extras
+  const [addSpread, setAddSpread] = useState("");
+  const [addSpreadOddsA, setAddSpreadOddsA] = useState("-110");
+  const [addSpreadOddsB, setAddSpreadOddsB] = useState("-110");
+  const [addOU, setAddOU] = useState("");
+  const [addOverOdds, setAddOverOdds] = useState("-110");
+  const [addUnderOdds, setAddUnderOdds] = useState("-110");
 
-  const notify = (msg,type="success") => { setNotif({msg,type}); setTimeout(()=>setNotif(null),3200); };
-  const saveUsers = async u => { setUsers(u); await fbSet("mln_users",u); };
-  const saveMarkets = async m => { setMarkets(m); await fbSet("mln_markets",m); };
-  const saveBets = async b => { setBets(b); await fbSet("mln_bets",b); };
-
-  //  Load + real-time 
-  useEffect(()=>{
-    (async()=>{
-      const [u,m,b,lv,hm,sm]=await Promise.all([
-        fbGet("mln_users"),fbGet("mln_markets"),fbGet("mln_bets"),
-        fbGet("mln_leaderboard_visible"),fbGet("mln_header_msg"),fbGet("mln_site_max_bet"),
+  // Load data + real-time listeners
+  useEffect(() => {
+    (async () => {
+      const [u, m, b, lv, hm, smb] = await Promise.all([
+        storageGet("mln_users"), storageGet("mln_markets"), storageGet("mln_bets"),
+        storageGet("mln_leaderboard_visible"), storageGet("mln_header_msg"), storageGet("mln_site_max_bet"),
       ]);
-      if(u)setUsers(u); if(m)setMarkets(m);
-      setBets(Array.isArray(b)?b:[]);
-      if(lv!==null)setLbVisible(lv);
-      if(hm)setHeaderMsg(hm);
-      setBannerDraft(hm||"");
-      if(sm!==null){setSiteMax(sm);setSiteMaxDraft(String(sm));}
+      if (u) setUsers(u);
+      if (m) setMarkets(m);
+      setBets(Array.isArray(b) ? b : []);
+      if (lv !== null) setLeaderboardVisible(lv);
+      if (hm !== null) setHeaderMsg(hm);
+      setHeaderDraft(hm || "");
+      if (smb !== null) { setSiteMaxBet(smb); setSiteMaxBetDraft(String(smb)); }
       setLoading(false);
     })();
-    const u1=onValue(ref(db,"mln_users"),s=>{if(s.exists()){const v=fbParse(s.val());if(v)setUsers(v);}},()=>{});
-    const u2=onValue(ref(db,"mln_markets"),s=>{if(s.exists()){const v=fbParse(s.val());if(v)setMarkets(v);}},()=>{});
-    const u3=onValue(ref(db,"mln_bets"),s=>{const v=s.exists()?fbParse(s.val()):[];setBets(Array.isArray(v)?v:[]);},()=>{});
-    const u4=onValue(ref(db,"mln_leaderboard_visible"),s=>{if(s.exists())setLbVisible(fbParse(s.val()));},()=>{});
-    const u5=onValue(ref(db,"mln_header_msg"),s=>{const v=s.exists()?fbParse(s.val()):"";setHeaderMsg(v||"");},()=>{});
-    const u6=onValue(ref(db,"mln_site_max_bet"),s=>{if(s.exists())setSiteMax(fbParse(s.val()));},()=>{});
-    return()=>{u1();u2();u3();u4();u5();u6();};
-  },[]);
+    const u1 = onValue(ref(db, "mln_users"), snap => { if (snap.exists()) { const v = parseFirebase(snap.val()); if (v) setUsers(v); } }, () => {});
+    const u2 = onValue(ref(db, "mln_markets"), snap => { if (snap.exists()) { const v = parseFirebase(snap.val()); if (v) setMarkets(v); } }, () => {});
+    const u3 = onValue(ref(db, "mln_bets"), snap => { const v = snap.exists() ? parseFirebase(snap.val()) : []; setBets(Array.isArray(v) ? v : []); }, () => {});
+    const u4 = onValue(ref(db, "mln_leaderboard_visible"), snap => { if (snap.exists()) setLeaderboardVisible(parseFirebase(snap.val())); }, () => {});
+    const u5 = onValue(ref(db, "mln_header_msg"), snap => { const v = snap.exists() ? parseFirebase(snap.val()) : ""; setHeaderMsg(v || ""); }, () => {});
+    const u6 = onValue(ref(db, "mln_site_max_bet"), snap => { if (snap.exists()) { const v = parseFirebase(snap.val()); setSiteMaxBet(v); } }, () => {});
+    return () => { u1(); u2(); u3(); u4(); u5(); u6(); };
+  }, []);
 
   // 30-min inactivity timeout
-  useEffect(()=>{
-    if(screen!=="lobby")return;
-    let t;
-    const reset=()=>{clearTimeout(t);t=setTimeout(()=>{setSlip({});setScreen("login");setUsername("");},30*60*1000);};
+  useEffect(() => {
+    if (screen !== "lobby") return;
+    let timer;
+    const reset = () => { clearTimeout(timer); timer = setTimeout(() => { setBetSlip({}); setScreen("login"); setUsername(""); }, 30 * 60 * 1000); };
     reset();
-    window.addEventListener("click",reset);window.addEventListener("keypress",reset);window.addEventListener("touchstart",reset);
-    return()=>{clearTimeout(t);window.removeEventListener("click",reset);window.removeEventListener("keypress",reset);window.removeEventListener("touchstart",reset);};
-  },[screen]);
+    window.addEventListener("click", reset); window.addEventListener("keypress", reset); window.addEventListener("touchstart", reset);
+    return () => { clearTimeout(timer); window.removeEventListener("click", reset); window.removeEventListener("keypress", reset); window.removeEventListener("touchstart", reset); };
+  }, [screen]);
 
   // Auto-advance PIN
-  useEffect(()=>{
-    if(pinVal.length<4)return;
-    const t=setTimeout(()=>handlePin(pinVal),150);
-    return()=>clearTimeout(t);
-  },[pinVal,loginStep]);
+  useEffect(() => {
+    if (pinInput.length < 4) return;
+    const t = setTimeout(() => handlePinComplete(pinInput), 150);
+    return () => clearTimeout(t);
+  }, [pinInput, loginStep]);
 
-  // Hide leaderboard redirect
-  useEffect(()=>{if(!lbVisible&&tab==="leaderboard")setTab("games");},[lbVisible]);
+  // Redirect off hidden leaderboard
+  useEffect(() => { if (!leaderboardVisible && activeTab === "leaderboard") setActiveTab("games"); }, [leaderboardVisible]);
+
+  function notify(msg, type = "success") { setNotification({ msg, type }); setTimeout(() => setNotification(null), 3200); }
+  async function saveUsers(u) { setUsers(u); await storageSet("mln_users", u); }
+  async function saveMarkets(m) { setMarkets(m); await storageSet("mln_markets", m); }
+  async function saveBets(b) { setBets(b); await storageSet("mln_bets", b); }
 
   //  Login 
-  function submitName() {
-    const raw=inputName.trim(); if(!raw)return;
-    const key=findUser(users,raw);
-    setPinVal(""); setPinErr("");
-    if(key){setInputName(key);setLoginStep("pin_login");}
-    else{
-      if(hasBanned(raw)){notify("That name isn't allowed. Please choose another.","error");return;}
+
+  function handleNameSubmit() {
+    const raw = inputName.trim(); if (!raw) return;
+    setPinInput(""); setPinError("");
+    const existingKey = findUserKey(users, raw);
+    if (existingKey) {
+      // Found existing account  update display to canonical casing
+      setInputName(existingKey);
+      setLoginStep("pin_login");
+    } else {
+      // New account  check banned words
+      if (containsBannedWord(raw)) {
+        setPinError(""); 
+        notify("That name contains a word that isn't allowed. Please choose a different name.", "error");
+        return;
+      }
       setLoginStep("pin_create");
     }
   }
 
-  async function handlePin(pin) {
-    const name=inputName.trim();
-    if(loginStep==="pin_login"){
-      const key=findUser(users,name)||name;
-      if(pin===users[key]?.pin){setUsername(key);setScreen("lobby");setLoginStep("name");setInputName("");setPinVal("");setPinErr("");}
-      else{setPinErr("Incorrect PIN");setPinVal("");}
+  async function handlePinComplete(pin) {
+    const name = inputName.trim();
+    if (loginStep === "pin_login") {
+      const key = findUserKey(users, name) || name;
+      if (pin === users[key]?.pin) { setUsername(key); setScreen("lobby"); setInputName(""); setLoginStep("name"); setPinInput(""); setPinError(""); }
+      else { setPinError("Incorrect PIN - try again"); setPinInput(""); }
       return;
     }
-    if(loginStep==="pin_create"){setPendingPin(pin);setPinVal("");setPinErr("");setLoginStep("pin_confirm");return;}
-    if(loginStep==="pin_confirm"){
-      if(pin===pendingPin){
-        await saveUsers({...users,[name]:{balance:START_BAL,pin,createdAt:Date.now()}});
-        setUsername(name);setScreen("lobby");setLoginStep("name");setInputName("");setPinVal("");setPinErr("");setPendingPin("");
-      }else{setPinErr("PINs don't match");setPinVal("");setTimeout(()=>{setLoginStep("pin_create");setPinErr("");},600);}
+    if (loginStep === "pin_create") { setPendingPin(pin); setPinInput(""); setPinError(""); setLoginStep("pin_confirm"); return; }
+    if (loginStep === "pin_confirm") {
+      if (pin === pendingPin) {
+        const newUsers = { ...users, [name]: { balance: STARTING_BALANCE, pin, createdAt: Date.now() } };
+        await saveUsers(newUsers);
+        setUsername(name); setScreen("lobby"); setInputName(""); setLoginStep("name"); setPinInput(""); setPinError(""); setPendingPin("");
+      } else { setPinError("PINs don't match - start over"); setPinInput(""); setTimeout(() => { setLoginStep("pin_create"); setPinError(""); }, 800); }
+      return;
     }
   }
+
+  function resetLoginToName() { setLoginStep("name"); setPinInput(""); setPinError(""); setPendingPin(""); }
 
   //  Derived 
-  const allMkts = [...markets.games,...markets.futures];
-  const slipEntries = Object.entries(slip);
-  const slipLegs = slipEntries.map(([optId,v])=>{
-    const m=allMkts.find(x=>x.id===v.mktId);
-    const o=m?.options.find(x=>x.id===optId);
-    return {optionId:optId,mktId:v.mktId,mktTitle:m?.title,optLabel:o?.label,odds:o?.odds,stake:v.stake};
-  });
-  const hasFuture = slipLegs.some(l=>allMkts.find(m=>m.id===l.mktId)?.type==="future");
-  const slipBases = slipLegs.map(l=>{const m=allMkts.find(x=>x.id===l.mktId);return m?getBase(m.title):null;});
-  const sameGameConflict = slipBases.some((b,i)=>slipBases.some((c,j)=>i!==j&&b&&c&&b===c));
-  const multiMkt = new Set(slipEntries.map(([,v])=>v.mktId)).size>1;
-  const parlayOk = multiMkt&&!hasFuture&&!sameGameConflict;
-  const parlayOdds = slipLegs.length>1?combineOdds(slipLegs):null;
-  const parlayPay = parlayStake>0&&parlayOdds!=null?calcPay(parseFloat(parlayStake),parlayOdds):0;
-  const straightTotal = slipLegs.reduce((a,l)=>a+(parseFloat(l.stake)||0),0);
-  const straightPay = slipLegs.reduce((a,l)=>a+(parseFloat(l.stake)>0?calcPay(parseFloat(l.stake),l.odds):0),0);
 
-  const optTotals={};
-  for(const b of bets){
-    if(b.betType==="straight")optTotals[b.optionId]=(optTotals[b.optionId]||0)+b.stake;
-    else if(b.betType==="parlay")for(const l of b.legs)optTotals[l.optionId]=(optTotals[l.optionId]||0)+b.stake;
+  const allMarkets = [...markets.games, ...markets.futures];
+  const slipEntries = Object.entries(betSlip);
+  const slipLegs = slipEntries.map(([optId, v]) => {
+    const market = allMarkets.find(m => m.id === v.marketId);
+    const option = market?.options.find(o => o.id === optId);
+    return { optionId: optId, marketId: v.marketId, marketTitle: market?.title, optionLabel: option?.label, odds: option?.odds, stake: v.stake };
+  });
+  const multiMarket = new Set(slipEntries.map(([, v]) => v.marketId)).size > 1;
+  const slipHasFuture = slipLegs.some(l => allMarkets.find(m => m.id === l.marketId)?.type === "future");
+  // Detect if parlay has moneyline+spread from the same base game (not allowed)
+  const getBaseTitle = (title) => title.replace(/ - Spread$/, '').replace(/ - O\/U [\d.]+$/, '');
+  const slipBaseTitles = slipLegs.map(l => {
+    const m = allMarkets.find(x => x.id === l.marketId);
+    return m ? getBaseTitle(m.title) : null;
+  });
+  // Only block ML + Spread from same game. ML+OU and Spread+OU are fine.
+  const isSpread = id => { const m = allMarkets.find(x => x.options.some(o => o.id === id)); return m?.title.endsWith(" - Spread"); };
+  const isML = id => { const m = allMarkets.find(x => x.options.some(o => o.id === id)); return m && !m.title.includes(" - Spread") && !m.title.includes(" - O/U"); };
+  const hasSameGameConflict = slipBaseTitles.some((base, i) =>
+    slipBaseTitles.some((other, j) => {
+      if (i === j || !base || !other || base !== other) return false;
+      const idI = slipEntries[i]?.[0], idJ = slipEntries[j]?.[0];
+      return (isML(idI) && isSpread(idJ)) || (isSpread(idI) && isML(idJ));
+    })
+  );
+  const parlayEligible = multiMarket && !slipHasFuture && !hasSameGameConflict;
+  const parlayOdds = slipLegs.length > 1 ? combinedAmericanOdds(slipLegs) : null;
+  const parlayPayout = parlayStake > 0 && parlayOdds != null ? calcPayout(parseFloat(parlayStake), parlayOdds) : 0;
+  const straightTotal = slipLegs.reduce((acc, l) => acc + (parseFloat(l.stake) || 0), 0);
+  const straightPayout = slipLegs.reduce((acc, l) => acc + (parseFloat(l.stake) > 0 ? calcPayout(parseFloat(l.stake), l.odds) : 0), 0);
+
+  const optionTotals = {};
+  for (const b of bets) {
+    if (b.betType === "straight") optionTotals[b.optionId] = (optionTotals[b.optionId] || 0) + b.stake;
+    else if (b.betType === "parlay") for (const leg of b.legs) optionTotals[leg.optionId] = (optionTotals[leg.optionId] || 0) + b.stake;
   }
 
-  const bal = users[username]?.balance??START_BAL;
-  const myBets = bets.filter(b=>b.username===username);
+  const balance = users[username]?.balance ?? STARTING_BALANCE;
+  const userBets = bets.filter(b => b.username === username);
 
-  const lbRaw = Object.entries(users).map(([name,u])=>{
-    const pending=bets.filter(b=>b.username===name&&b.status==="pending").reduce((s,b)=>s+b.stake,0);
-    return {name,u,pending,total:(u.balance||0)+pending};
-  }).sort((a,b)=>{
-    if(b.total!==a.total)return b.total-a.total;
-    if(b.pending!==a.pending)return b.pending-a.pending;
-    return a.name.localeCompare(b.name);
+  // Leaderboard sorted by total (balance + pending stakes)
+  const leaderboardRaw = Object.entries(users).map(([name, u]) => {
+    const pendingAmt = bets.filter(b => b.username === name && b.status === "pending").reduce((s, b) => s + b.stake, 0);
+    return { name, u, pendingAmt, total: (u.balance || 0) + pendingAmt };
+  }).sort((a, b) => {
+    if (b.total !== a.total) return b.total - a.total;           // 1. highest total first
+    if (b.pendingAmt !== a.pendingAmt) return b.pendingAmt - a.pendingAmt; // 2. most open bets
+    return a.name.localeCompare(b.name);                          // 3. alphabetical
   });
-  const lb = lbRaw.reduce((acc,e,i)=>{
-    const rank=i===0?1:(e.total===acc[i-1].total?acc[i-1].rank:i+1);
-    acc.push({...e,rank}); return acc;
-  },[]);
-  const lbActive = lb.filter(p=>bets.some(b=>b.username===p.name));
-  const lbInactive = lb.filter(p=>!bets.some(b=>b.username===p.name));
 
-  //  Bet actions 
-  function togglePick(mktId, optId) {
-    if(slip[optId]){const c={...slip};delete c[optId];setSlip(c);return;}
-    const c={};
-    for(const [k,v] of slipEntries){if(v.mktId!==mktId)c[k]=v;}
-    c[optId]={mktId,stake:""};
-    setSlip(c);
-    const m=allMkts.find(x=>x.id===mktId);
-    if(m?.type==="future"&&slipMode==="parlay")setSlipMode("straight");
+  // Assign rank numbers  tied players share the same rank
+  const leaderboard = leaderboardRaw.reduce((acc, entry, i) => {
+    const rank = i === 0 ? 1 : (entry.total === acc[i-1].total ? acc[i-1]._rank : i + 1);
+    acc.push({ ...entry, _rank: rank });
+    return acc;
+  }, []);
+
+  // Split into active bettors vs no-bets-yet
+  const activePlayers = leaderboard.filter(p => bets.some(b => b.username === p.name));
+  const inactivePlayers = leaderboard.filter(p => !bets.some(b => b.username === p.name));
+
+  const rawGames = markets.games;
+  const rawFutures = markets.futures;
+  const displayMarkets = activeTab === "games"
+    ? (gamesFilter === "open"
+        ? rawGames.filter(m => m.status === "open" || m.status === "paused")
+        : rawGames.filter(m => m.status === "settled"))
+    : (gamesFilter === "open"
+        ? rawFutures.filter(m => m.status === "open" || m.status === "paused")
+        : rawFutures.filter(m => m.status === "settled"));
+
+  //  House P&L 
+  // For each settled market: house_take = total_staked - total_paid_out
+  function getMarketPnl(marketId) {
+    const relevant = bets.filter(b => {
+      if (b.betType === "straight") return b.marketId === marketId && (b.status === "won" || b.status === "lost");
+      if (b.betType === "parlay") return b.legs.some(l => l.marketId === marketId) && (b.status === "won" || b.status === "lost");
+      return false;
+    });
+    const totalStaked = relevant.reduce((s, b) => s + b.stake, 0);
+    const totalPaid = relevant.filter(b => b.status === "won").reduce((s, b) => s + b.payout, 0);
+    const betCount = relevant.length;
+    return { totalStaked, totalPaid, net: totalStaked - totalPaid, betCount };
   }
-  const setStake=(optId,val)=>setSlip(p=>({...p,[optId]:{...p[optId],stake:val}}));
+
+  function getPlayerLifetimePnl(playerName) {
+    const resolved = bets.filter(b => b.username === playerName && (b.status === "won" || b.status === "lost"));
+    const staked = resolved.reduce((s, b) => s + b.stake, 0);
+    const returned = resolved.filter(b => b.status === "won").reduce((s, b) => s + b.payout, 0);
+    return returned - staked; // positive = player up, negative = player down
+  }
+
+  // Project house P&L if a specific option wins  honors original bet odds
+  // Straight bets only  parlays excluded because their multi-leg payouts
+  // can't be attributed to a single market outcome cleanly.
+  // Formula: house net = total staked on market - payout owed to winners of this option
+  // e.g. $1359 on GHG (-200) + $1225 on Slayers: if GHG wins, payout = $1359 * 1.5 = $2038.50
+  // house net = $2584 - $2038.50 = +$545.50
+  function getOptionProjection(marketId, winningOptionId) {
+    // Straight bets on this market
+    const straightBets = bets.filter(b =>
+      b.status === "pending" &&
+      b.betType === "straight" &&
+      b.marketId === marketId
+    );
+    const straightStaked = straightBets.reduce((s, b) => s + b.stake, 0);
+    const straightPayout = straightBets
+      .filter(b => b.optionId === winningOptionId)
+      .reduce((s, b) => s + b.payout, 0);
+
+    // Parlay bets: count stakes from parlays that would BUST if this market's
+    // losing options lose (i.e. parlays betting on any option OTHER than the winner).
+    // We add these to totalStaked  house keeps them.
+    // We do NOT subtract parlay payouts when winner wins (too complex, skipped as agreed).
+    const parlayBustedStakes = bets
+      .filter(b =>
+        b.status === "pending" &&
+        b.betType === "parlay"
+      )
+      .filter(b => {
+        const leg = b.legs.find(l => l.marketId === marketId);
+        // This parlay has a leg on this market, and it's on the LOSING option
+        return leg && leg.optionId !== winningOptionId;
+      })
+      .reduce((s, b) => s + b.stake, 0);
+
+    const totalStaked = straightStaked + parlayBustedStakes;
+    return { totalStaked, totalPayout: straightPayout, net: totalStaked - straightPayout };
+  }
+
+  const houseTotalNet = allMarkets
+    .filter(m => m.status === "settled")
+    .reduce((sum, m) => sum + getMarketPnl(m.id).net, 0);
+
+  //  Bet slip actions 
+
+  function togglePick(marketId, optionId) {
+    if (betSlip[optionId]) { const c = { ...betSlip }; delete c[optionId]; setBetSlip(c); return; }
+    const c = {};
+    for (const [k, v] of slipEntries) { if (v.marketId !== marketId) c[k] = v; }
+    c[optionId] = { marketId, stake: "" };
+    setBetSlip(c);
+    const market = allMarkets.find(m => m.id === marketId);
+    if (market?.type === "future" && slipMode === "parlay") setSlipMode("straight");
+  }
+  function setStake(optionId, val) { setBetSlip(p => ({ ...p, [optionId]: { ...p[optionId], stake: val } })); }
 
   async function placeBets() {
-    if(!slipEntries.length)return;
-    for(const [,v] of slipEntries){
-      const m=allMkts.find(x=>x.id===v.mktId);
-      if(m?.status==="paused"){notify(`${m.title} is paused`,"error");return;}
-      if(m?.status==="settled"){notify(`${m.title} is already settled`,"error");return;}
+    if (slipEntries.length === 0) return;
+    for (const [, v] of slipEntries) {
+      const market = allMarkets.find(m => m.id === v.marketId);
+      if (market?.status === "paused") { notify(`${market.title} is paused`, "error"); return; }
+      if (market?.status === "settled") { notify(`${market.title} is already settled`, "error"); return; }
     }
-    if(slipMode==="parlay"){
-      if(hasFuture){notify("Futures can't be in parlays","error");setSlipMode("straight");return;}
-      if(sameGameConflict){notify("Can't parlay moneyline + spread from the same game","error");return;}
-      const stake=parseFloat(parlayStake);
-      if(!stake||stake<=0){notify("Enter a valid stake","error");return;}
-      if(stake>bal){notify("Not enough balance","error");return;}
-      if(siteMax&&stake>siteMax){notify(`Max bet is $${siteMax}`,"error");return;}
-      const co=combineOdds(slipLegs);
-      const newBet={id:uid(),username,betType:"parlay",
-        legs:slipLegs.map(l=>({mktId:l.mktId,mktTitle:l.mktTitle,optionId:l.optionId,optionLabel:l.optLabel,odds:l.odds,status:"pending"})),
-        combinedOdds:co,stake,payout:calcPay(stake,co),status:"pending",placedAt:Date.now()};
-      await saveUsers({...users,[username]:{...users[username],balance:bal-stake}});
-      await saveBets([...bets,newBet]);
-      setSlip({});setParlayStake("");
-      notify(`Parlay placed! ${fmt(co)}`);
+    if (slipMode === "parlay") {
+      if (slipHasFuture) { notify("Futures can't be included in parlays", "error"); setSlipMode("straight"); return; }
+      const stake = parseFloat(parlayStake);
+      if (!stake || stake <= 0) { notify("Enter a valid parlay stake", "error"); return; }
+      if (stake > balance) { notify("Not enough balance!", "error"); return; }
+      for (const leg of slipLegs) {
+        const market = allMarkets.find(m => m.id === leg.marketId);
+        if (market?.maxBet && stake > market.maxBet) { notify(`Max bet on ${market.title} is $${market.maxBet}`, "error"); return; }
+      }
+      if (siteMaxBet && stake > siteMaxBet) { notify(`Site maximum bet is $${siteMaxBet}`, "error"); return; }
+      const combo = combinedAmericanOdds(slipLegs);
+      const payout = calcPayout(stake, combo);
+      const newBet = { id: uid(), username, betType: "parlay", legs: slipLegs.map(l => ({ marketId: l.marketId, marketTitle: l.marketTitle, optionId: l.optionId, optionLabel: l.optionLabel, odds: l.odds, status: "pending" })), combinedOdds: combo, stake, payout, status: "pending", placedAt: Date.now() };
+      await saveUsers({ ...users, [username]: { ...users[username], balance: balance - stake } });
+      await saveBets([...bets, newBet]);
+      setBetSlip({}); setParlayStake("");
+      notify(`Parlay placed! ${fmt(combo)} - $${payout.toFixed(2)} to win`);
     } else {
-      let total=0;
-      for(const [,v] of slipEntries){const a=parseFloat(v.stake);if(!a||a<=0){notify("Enter a valid stake for each bet","error");return;}total+=a;}
-      if(total>bal){notify("Not enough balance","error");return;}
-      for(const [,v] of slipEntries){
-        const m=allMkts.find(x=>x.id===v.mktId);const a=parseFloat(v.stake);
-        if(m?.maxBet&&a>m.maxBet){notify(`Max bet on this market is $${m.maxBet}`,"error");return;}
-        if(siteMax&&a>siteMax){notify(`Max bet is $${siteMax}`,"error");return;}
+      let total = 0;
+      for (const [, v] of slipEntries) { const amt = parseFloat(v.stake); if (!amt || amt <= 0) { notify("Enter a valid stake for each bet", "error"); return; } total += amt; }
+      if (total > balance) { notify("Not enough balance!", "error"); return; }
+      for (const [, v] of slipEntries) {
+        const market = allMarkets.find(m => m.id === v.marketId); const amt = parseFloat(v.stake);
+        if (market?.maxBet && amt > market.maxBet) { notify(`Max bet on ${market.title} is $${market.maxBet}`, "error"); return; }
+        if (siteMaxBet && amt > siteMaxBet) { notify(`Site maximum bet is $${siteMaxBet}`, "error"); return; }
       }
-      const newBets=[...bets];
-      for(const [optId,v] of slipEntries){
-        const m=allMkts.find(x=>x.id===v.mktId);const o=m.options.find(x=>x.id===optId);const stake=parseFloat(v.stake);
-        newBets.push({id:uid(),username,betType:"straight",
-          marketId:v.mktId,marketTitle:m.title,optionId:optId,optionLabel:o.label,
-          odds:o.odds,stake,payout:calcPay(stake,o.odds),status:"pending",placedAt:Date.now()});
+      const newBets = [...bets];
+      for (const [optionId, v] of slipEntries) {
+        const market = allMarkets.find(m => m.id === v.marketId); const option = market.options.find(o => o.id === optionId); const stake = parseFloat(v.stake);
+        newBets.push({ id: uid(), username, betType: "straight", marketId: v.marketId, marketTitle: market.title, optionId, optionLabel: option.label, odds: option.odds, stake, payout: calcPayout(stake, option.odds), status: "pending", placedAt: Date.now() });
       }
-      await saveUsers({...users,[username]:{...users[username],balance:bal-total}});
-      await saveBets(newBets);setSlip({});
-      notify(`${slipEntries.length} bet${slipEntries.length>1?"s":""} placed!`);
+      await saveUsers({ ...users, [username]: { ...users[username], balance: balance - total } });
+      await saveBets(newBets); setBetSlip({});
+      notify(`${slipEntries.length} bet${slipEntries.length > 1 ? "s" : ""} placed!`);
     }
   }
 
   //  Admin actions 
-  async function settleMarket(mktId,winOptId){
-    const settle=m=>m.id===mktId?{...m,status:"settled",winner:winOptId}:m;
-    const nm={games:markets.games.map(settle),futures:markets.futures.map(settle)};
-    const nu={...users};
-    const nb=bets.map(b=>{
-      if(b.status!=="pending")return b;
-      if(b.betType==="straight"){
-        if(b.marketId!==mktId)return b;
-        const won=b.optionId===winOptId;
-        if(won)nu[b.username]={...nu[b.username],balance:(nu[b.username]?.balance||0)+b.payout};
-        return {...b,status:won?"won":"lost"};
-      }
-      if(b.betType==="parlay"){
-        const leg=b.legs.find(l=>l.mktId===mktId||l.marketId===mktId);if(!leg)return b;
-        const nl=b.legs.map(l=>(l.mktId===mktId||l.marketId===mktId)?{...l,status:l.optionId===winOptId?"won":"lost"}:l);
-        const lost=nl.some(l=>l.status==="lost");
-        const won2=nl.every(l=>l.status==="won");
-        if(won2)nu[b.username]={...nu[b.username],balance:(nu[b.username]?.balance||0)+b.payout};
-        return {...b,legs:nl,status:lost?"lost":won2?"won":b.status};
-      }
-      return b;
-    });
-    await saveUsers(nu);await saveMarkets(nm);await saveBets(nb);
-    notify(`Settled! ${I.money}`);
-  }
 
-  async function unsettleMarket(mktId){
-    const nu={...users};
-    const nb=bets.map(b=>{
-      if(b.betType==="straight"){
-        if(b.marketId!==mktId)return b;
-        if(b.status==="won")nu[b.username]={...nu[b.username],balance:Math.max(0,(nu[b.username]?.balance||0)-b.payout)};
-        return(b.status==="won"||b.status==="lost")?{...b,status:"pending"}:b;
+  async function settleMarket(marketId, winningOptionId) {
+    const settle = m => m.id === marketId ? { ...m, status: "settled", winner: winningOptionId } : m;
+    const newMarkets = { games: markets.games.map(settle), futures: markets.futures.map(settle) };
+    const newUsers = { ...users };
+    const newBets = bets.map(b => {
+      if (b.status !== "pending") return b;
+      if (b.betType === "straight") {
+        if (b.marketId !== marketId) return b;
+        const won = b.optionId === winningOptionId;
+        if (won) newUsers[b.username] = { ...newUsers[b.username], balance: (newUsers[b.username]?.balance || 0) + b.payout };
+        return { ...b, status: won ? "won" : "lost" };
       }
-      if(b.betType==="parlay"){
-        const hasLeg=b.legs.some(l=>l.mktId===mktId||l.marketId===mktId);if(!hasLeg)return b;
-        if(b.status==="won")nu[b.username]={...nu[b.username],balance:Math.max(0,(nu[b.username]?.balance||0)-b.payout)};
-        const nl=b.legs.map(l=>(l.mktId===mktId||l.marketId===mktId)?{...l,status:"pending"}:l);
-        return {...b,legs:nl,status:nl.some(l=>l.status==="lost")?"lost":"pending"};
+      if (b.betType === "parlay") {
+        const hasLeg = b.legs.some(l => l.marketId === marketId);
+        if (!hasLeg) return b;
+        const newLegs = b.legs.map(l => l.marketId === marketId ? { ...l, status: l.optionId === winningOptionId ? "won" : "lost" } : l);
+        const anyLost = newLegs.some(l => l.status === "lost");
+        const allWon = newLegs.every(l => l.status === "won");
+        let newStatus = b.status;
+        if (anyLost) newStatus = "lost";
+        else if (allWon) { newStatus = "won"; newUsers[b.username] = { ...newUsers[b.username], balance: (newUsers[b.username]?.balance || 0) + b.payout }; }
+        return { ...b, legs: newLegs, status: newStatus };
       }
       return b;
     });
-    const reopen=m=>m.id===mktId?{...m,status:"open",winner:null}:m;
-    await saveUsers(nu);await saveMarkets({games:markets.games.map(reopen),futures:markets.futures.map(reopen)});await saveBets(nb);
-    notify(`${I.undo} Market reopened, payouts reversed`);
+    await saveUsers(newUsers); await saveMarkets(newMarkets); await saveBets(newBets);
+    notify("Market settled - winners paid! $$$");
   }
 
-  async function eliminateOption(mktId,optId){
-    const nb=bets.map(b=>{
-      if(b.status!=="pending")return b;
-      if(b.betType==="straight"&&b.marketId===mktId&&b.optionId===optId)return {...b,status:"lost"};
-      if(b.betType==="parlay"){
-        const leg=b.legs.find(l=>(l.mktId===mktId||l.marketId===mktId)&&l.optionId===optId);if(!leg)return b;
-        const nl=b.legs.map(l=>(l.mktId===mktId||l.marketId===mktId)&&l.optionId===optId?{...l,status:"lost"}:l);
-        return {...b,legs:nl,status:"lost"};
+  async function unsettleMarket(marketId) {
+    const newUsers = { ...users };
+    const newBets = bets.map(b => {
+      if (b.betType === "straight") {
+        if (b.marketId !== marketId) return b;
+        if (b.status === "won") newUsers[b.username] = { ...newUsers[b.username], balance: Math.max(0, (newUsers[b.username]?.balance || 0) - b.payout) };
+        if (b.status === "won" || b.status === "lost") return { ...b, status: "pending" };
+        return b;
+      }
+      if (b.betType === "parlay") {
+        const hasLeg = b.legs.some(l => l.marketId === marketId);
+        if (!hasLeg) return b;
+        if (b.status === "won") newUsers[b.username] = { ...newUsers[b.username], balance: Math.max(0, (newUsers[b.username]?.balance || 0) - b.payout) };
+        const newLegs = b.legs.map(l => l.marketId === marketId ? { ...l, status: "pending" } : l);
+        const anyLost = newLegs.some(l => l.status === "lost");
+        return { ...b, legs: newLegs, status: anyLost ? "lost" : "pending" };
       }
       return b;
     });
-    const mark=m=>m.id===mktId?{...m,eliminated:[...(m.eliminated||[]),optId]}:m;
-    await saveMarkets({games:markets.games.map(mark),futures:markets.futures.map(mark)});
-    await saveBets(nb);
-    const opt=allMkts.find(m=>m.id===mktId)?.options.find(o=>o.id===optId);
-    notify(`${opt?.label} eliminated`);
+    const reopen = m => m.id === marketId ? { ...m, status: "open", winner: null } : m;
+    const newMarkets = { games: markets.games.map(reopen), futures: markets.futures.map(reopen) };
+    await saveUsers(newUsers); await saveMarkets(newMarkets); await saveBets(newBets);
+    notify(`Market reopened - payouts reversed ${I.undo}`);
   }
 
-  async function togglePauseMkt(mktId){
-    const m=allMkts.find(x=>x.id===mktId);
-    const ns=m.status==="paused"?"open":"paused";
-    const tog=x=>x.id===mktId?{...x,status:ns}:x;
-    await saveMarkets({games:markets.games.map(tog),futures:markets.futures.map(tog)});
-    notify(ns==="paused"?`${I.pause} Paused`:`${I.play} Opened`);
-  }
-
-  async function pauseAll(){
-    await saveMarkets({games:markets.games.map(m=>m.status==="open"?{...m,status:"paused"}:m),futures:markets.futures.map(m=>m.status==="open"?{...m,status:"paused"}:m)});
-    notify(`${I.pause} All markets paused`);
-  }
-  async function openAll(){
-    await saveMarkets({games:markets.games.map(m=>m.status==="paused"?{...m,status:"open"}:m),futures:markets.futures.map(m=>m.status==="paused"?{...m,status:"open"}:m)});
-    notify(`${I.play} All markets opened`);
-  }
-
-  async function voidMkt(mktId){
-    const nu={...users};
-    const nb=bets.map(b=>{
-      if(b.status!=="pending")return b;
-      const isMatch=(b.betType==="straight"&&b.marketId===mktId)||(b.betType==="parlay"&&b.legs.some(l=>l.mktId===mktId||l.marketId===mktId));
-      if(!isMatch)return b;
-      nu[b.username]={...nu[b.username],balance:(nu[b.username]?.balance||0)+b.stake};
-      return {...b,status:"voided"};
+  async function pushMarket(marketId) {
+    // Push: refund all pending bets on this market. For parlays, remove the leg and recalculate.
+    const newUsers = { ...users };
+    const newBets = bets.map(b => {
+      if (b.status !== "pending") return b;
+      if (b.betType === "straight") {
+        if (b.marketId !== marketId) return b;
+        // Refund stake
+        newUsers[b.username] = { ...newUsers[b.username], balance: (newUsers[b.username]?.balance || 0) + b.stake };
+        return { ...b, status: "pushed" };
+      }
+      if (b.betType === "parlay") {
+        const hasLeg = b.legs.some(l => l.marketId === marketId || l.mktId === marketId);
+        if (!hasLeg) return b;
+        // Remove the pushed leg, recalculate parlay odds with remaining legs
+        const remainingLegs = b.legs.filter(l => l.marketId !== marketId && l.mktId !== marketId);
+        if (remainingLegs.length === 0) {
+          // All legs pushed — full refund
+          newUsers[b.username] = { ...newUsers[b.username], balance: (newUsers[b.username]?.balance || 0) + b.stake };
+          return { ...b, legs: b.legs.map(l => l.marketId === marketId || l.mktId === marketId ? { ...l, status: "pushed" } : l), status: "pushed" };
+        }
+        if (remainingLegs.length === 1) {
+          // Single leg left — treat as straight bet
+          const leg = remainingLegs[0];
+          const newPayout = calcPayout(b.stake, leg.odds);
+          return { ...b, legs: b.legs.map(l => l.marketId === marketId || l.mktId === marketId ? { ...l, status: "pushed" } : l), payout: newPayout };
+        }
+        // Recalculate combined odds for remaining legs
+        const newOdds = combinedAmericanOdds(remainingLegs);
+        const newPayout = calcPayout(b.stake, newOdds);
+        return { ...b, legs: b.legs.map(l => l.marketId === marketId || l.mktId === marketId ? { ...l, status: "pushed" } : l), combinedOdds: newOdds, payout: newPayout };
+      }
+      return b;
     });
-    const rm=m=>m.id!==mktId;
-    await saveUsers(nu);await saveMarkets({games:markets.games.filter(rm),futures:markets.futures.filter(rm)});await saveBets(nb);
-    notify("Market voided, bets refunded");
+    const settle = m => m.id === marketId ? { ...m, status: "settled", winner: "push" } : m;
+    const newMarkets = { games: markets.games.map(settle), futures: markets.futures.map(settle) };
+    await saveUsers(newUsers); await saveMarkets(newMarkets); await saveBets(newBets);
+    notify(`Market pushed — all bets refunded ${I.undo}`);
   }
 
-  async function deleteUser(name){
-    const nu={...users};delete nu[name];
-    await saveUsers(nu);await saveBets(bets.filter(b=>b.username!==name));
-    if(adjUser===name)setAdjUser(null);
-    notify(`${name} deleted`);
+  async function eliminateOption(marketId, losingOptionId) {
+    // Mark bets on this option as lost, refund nothing  market stays open for remaining options
+    const newUsers = { ...users };
+    const newBets = bets.map(b => {
+      if (b.status !== "pending") return b;
+      if (b.betType === "straight" && b.marketId === marketId && b.optionId === losingOptionId) {
+        return { ...b, status: "lost" };
+      }
+      if (b.betType === "parlay") {
+        const leg = b.legs.find(l => l.marketId === marketId && l.optionId === losingOptionId);
+        if (!leg) return b;
+        const newLegs = b.legs.map(l =>
+          l.marketId === marketId && l.optionId === losingOptionId ? { ...l, status: "lost" } : l
+        );
+        // Parlay busts  already lost
+        return { ...b, legs: newLegs, status: "lost" };
+      }
+      return b;
+    });
+    // Mark the option as eliminated on the market object
+    const markElim = m => m.id === marketId
+      ? { ...m, eliminated: [...(m.eliminated || []), losingOptionId] }
+      : m;
+    const newMarkets = { games: markets.games.map(markElim), futures: markets.futures.map(markElim) };
+    await saveUsers(newUsers); await saveMarkets(newMarkets); await saveBets(newBets);
+    const opt = allMarkets.find(m => m.id === marketId)?.options.find(o => o.id === losingOptionId);
+    notify(`${opt?.label} eliminated - bets resolved as losses`);
   }
 
-  async function applyAdj(name){
-    const d=parseFloat(adjAmt);if(isNaN(d)){notify("Enter a number","error");return;}
-    await saveUsers({...users,[name]:{...users[name],balance:Math.max(0,(users[name]?.balance||0)+d)}});
-    setAdjUser(null);setAdjAmt("");notify(`Balance adjusted by ${d>=0?"+":""}$${d.toFixed(2)}`);
+  async function pushMarket(marketId, pushOptionId) {
+    // Push = refund stakes, mark bets as "pushed", market settles with no winner
+    const newUsers = { ...users };
+    const newBets = bets.map(b => {
+      if (b.status !== "pending") return b;
+      if (b.betType === "straight") {
+        if (b.marketId !== marketId) return b;
+        if (b.optionId === pushOptionId) {
+          // Refund stake
+          newUsers[b.username] = { ...newUsers[b.username], balance: (newUsers[b.username]?.balance || 0) + b.stake };
+          return { ...b, status: "pushed" };
+        }
+        return { ...b, status: "lost" };
+      }
+      if (b.betType === "parlay") {
+        const leg = b.legs.find(l => l.marketId === marketId);
+        if (!leg) return b;
+        if (leg.optionId === pushOptionId) {
+          // Pushed leg: treat as a push — remove from parlay (refund stake if solo, otherwise remove leg)
+          const newLegs = b.legs.map(l => l.marketId === marketId ? { ...l, status: "pushed" } : l);
+          const activeLeg = newLegs.filter(l => l.status !== "pushed");
+          if (activeLeg.length === 0) {
+            newUsers[b.username] = { ...newUsers[b.username], balance: (newUsers[b.username]?.balance || 0) + b.stake };
+            return { ...b, legs: newLegs, status: "pushed" };
+          }
+          const anyLost = newLegs.some(l => l.status === "lost");
+          const allWon = newLegs.filter(l => l.status !== "pushed").every(l => l.status === "won");
+          if (anyLost) return { ...b, legs: newLegs, status: "lost" };
+          if (allWon) {
+            newUsers[b.username] = { ...newUsers[b.username], balance: (newUsers[b.username]?.balance || 0) + b.payout };
+            return { ...b, legs: newLegs, status: "won" };
+          }
+          return { ...b, legs: newLegs };
+        }
+        const newLegs = b.legs.map(l => l.marketId === marketId ? { ...l, status: "lost" } : l);
+        return { ...b, legs: newLegs, status: "lost" };
+      }
+      return b;
+    });
+    const settle = m => m.id === marketId ? { ...m, status: "settled", winner: null, pushed: pushOptionId } : m;
+    const newMarkets = { games: markets.games.map(settle), futures: markets.futures.map(settle) };
+    await saveUsers(newUsers); await saveMarkets(newMarkets); await saveBets(newBets);
+    notify("Push settled - stakes refunded");
   }
 
-  async function handleAddMkt(){
-    if(!aTitle.trim()){notify("Title required","error");return;}
-    const newId=`g_${uid()}`;const toAdd=[];
-    if(addType==="game"){
-      if(!aA.trim()||!aB.trim()||!aOddsA||!aOddsB){notify("Fill all fields","error");return;}
-      const oA=parseInt(aOddsA),oB=parseInt(aOddsB);
-      toAdd.push({id:newId,type:"game",title:aTitle.trim(),subtitle:aSub.trim()||"Custom Market",status:"open",winner:null,maxBet:aMax?parseFloat(aMax):null,
-        options:[{id:`${newId}_a`,label:aA.trim(),odds:oA},{id:`${newId}_b`,label:aB.trim(),odds:oB}]});
-      if(aSpread){
-        const sp=parseFloat(aSpread),spA=parseInt(aSpOddsA),spB=parseInt(aSpOddsB);
-        if(!isNaN(sp)&&!isNaN(spA)&&!isNaN(spB)){
-          const sid=`${newId}_sp`;
-          toAdd.push({id:sid,type:"game",title:`${aTitle.trim()} - Spread`,subtitle:(aSub.trim()||"Custom Market")+" - Spread",status:"open",winner:null,maxBet:aMax?parseFloat(aMax):null,
-            options:[{id:`${sid}_a`,label:`${aA.trim()} ${sp>0?"+":""}${sp}`,odds:spA},{id:`${sid}_b`,label:`${aB.trim()} ${-sp>0?"+":""}${-sp}`,odds:spB}]});
+  async function voidMarket(marketId) {
+    const newUsers = { ...users };
+    const newBets = bets.map(b => {
+      if (b.status !== "pending") return b;
+      if ((b.betType === "straight" && b.marketId === marketId) || (b.betType === "parlay" && b.legs.some(l => l.marketId === marketId))) {
+        newUsers[b.username] = { ...newUsers[b.username], balance: (newUsers[b.username]?.balance || 0) + b.stake };
+        return { ...b, status: "voided" };
+      }
+      return b;
+    });
+    const rm = m => m.id !== marketId;
+    await saveUsers(newUsers); await saveMarkets({ games: markets.games.filter(rm), futures: markets.futures.filter(rm) }); await saveBets(newBets);
+    notify("Market voided & bets refunded");
+  }
+
+  async function togglePauseMarket(marketId) {
+    const market = allMarkets.find(m => m.id === marketId);
+    const newStatus = market.status === "paused" ? "open" : "paused";
+    const toggle = m => m.id === marketId ? { ...m, status: newStatus } : m;
+    await saveMarkets({ games: markets.games.map(toggle), futures: markets.futures.map(toggle) });
+    notify(newStatus === "paused" ? `${I.pause} Market paused` : "> Market reopened");
+  }
+
+  async function pauseAllMarkets() {
+    const pauseAll = m => m.status === "open" ? { ...m, status: "paused" } : m;
+    const newMarkets = { games: markets.games.map(pauseAll), futures: markets.futures.map(pauseAll) };
+    await saveMarkets(newMarkets);
+    notify("|| All open markets paused");
+  }
+
+  async function unpauseAllMarkets() {
+    const openAll = m => m.status === "paused" ? { ...m, status: "open" } : m;
+    const newMarkets = { games: markets.games.map(openAll), futures: markets.futures.map(openAll) };
+    await saveMarkets(newMarkets);
+    notify("> All markets reopened");
+  }
+
+  function startEdit(market) { setEditingMarket(market); setEditTitle(market.title); setEditSubtitle(market.subtitle); setEditOptions(market.options.map(o => ({ ...o }))); setEditMaxBet(market.maxBet ?? ""); }
+
+  async function saveEdit() {
+    if (!editTitle.trim()) { notify("Title required", "error"); return; }
+    const updated = { ...editingMarket, title: editTitle.trim(), subtitle: editSubtitle.trim(), options: editOptions.map(o => ({ ...o, odds: parseInt(o.odds) })), maxBet: editMaxBet ? parseFloat(editMaxBet) : null };
+    const upd = m => m.id === updated.id ? updated : m;
+    await saveMarkets({ games: markets.games.map(upd), futures: markets.futures.map(upd) });
+    setEditingMarket(null); notify("Market updated! OK");
+  }
+
+  async function handleAddMarket() {
+    if (!addTitle.trim()) { notify("Title required", "error"); return; }
+    const newId = addType === "game" ? `g_${uid()}` : `f_${uid()}`;
+    let newMarketsToAdd = [];
+    if (addType === "game") {
+      if (!addTeamA.trim() || !addTeamB.trim() || !addOddsA || !addOddsB) { notify("Fill in both teams and odds", "error"); return; }
+      const oA = parseInt(addOddsA), oB = parseInt(addOddsB);
+      if (isNaN(oA) || isNaN(oB)) { notify("Odds must be numbers like +150 or -110", "error"); return; }
+      const moneyline = { id: newId, type: "game", title: addTitle.trim(), subtitle: addSubtitle.trim() || "Custom Market", status: "open", winner: null, maxBet: addMaxBet ? parseFloat(addMaxBet) : null,
+        options: [{ id: `${newId}_a`, label: addTeamA.trim(), odds: oA }, { id: `${newId}_b`, label: addTeamB.trim(), odds: oB }] };
+      newMarketsToAdd.push(moneyline);
+      // Optional spread
+      if (addSpread) {
+        const sp = parseFloat(addSpread), spOA = parseInt(addSpreadOddsA), spOB = parseInt(addSpreadOddsB);
+        if (!isNaN(sp) && !isNaN(spOA) && !isNaN(spOB)) {
+          const spId = `${newId}_sp`;
+          newMarketsToAdd.push({ id: spId, type: "game", title: `${addTitle.trim()} - Spread`, subtitle: (addSubtitle.trim() || "Custom Market") + " - Spread", status: "open", winner: null, maxBet: addMaxBet ? parseFloat(addMaxBet) : null,
+            options: [{ id: `${spId}_a`, label: `${addTeamA.trim()} ${sp > 0 ? "+" : ""}${sp}`, odds: spOA }, { id: `${spId}_b`, label: `${addTeamB.trim()} ${-sp > 0 ? "+" : ""}${-sp}`, odds: spOB }] });
         }
       }
-      if(aOU){
-        const ou=parseFloat(aOU),ovO=parseInt(aOvOdds),unO=parseInt(aUnOdds);
-        if(!isNaN(ou)&&!isNaN(ovO)&&!isNaN(unO)){
-          const oid=`${newId}_ou`;
-          toAdd.push({id:oid,type:"game",title:`${aTitle.trim()} - O/U ${ou}`,subtitle:(aSub.trim()||"Custom Market")+" - O/U",status:"open",winner:null,maxBet:aMax?parseFloat(aMax):null,
-            options:[{id:`${oid}_ov`,label:`Over ${ou}`,odds:ovO},{id:`${oid}_un`,label:`Under ${ou}`,odds:unO}]});
+      // Optional O/U
+      if (addOU) {
+        const ou = parseFloat(addOU), ovO = parseInt(addOverOdds), unO = parseInt(addUnderOdds);
+        if (!isNaN(ou) && !isNaN(ovO) && !isNaN(unO)) {
+          const ouId = `${newId}_ou`;
+          newMarketsToAdd.push({ id: ouId, type: "game", title: `${addTitle.trim()} - O/U ${ou}`, subtitle: (addSubtitle.trim() || "Custom Market") + " - Over/Under", status: "open", winner: null, maxBet: addMaxBet ? parseFloat(addMaxBet) : null,
+            options: [{ id: `${ouId}_ov`, label: `Over ${ou}`, odds: ovO }, { id: `${ouId}_un`, label: `Under ${ou}`, odds: unO }] });
         }
       }
     } else {
-      const valid=futOpts.filter(o=>o.label.trim()&&o.odds);
-      if(valid.length<2){notify("At least 2 options required","error");return;}
-      const fid=`f_${uid()}`;
-      toAdd.push({id:fid,type:"future",title:aTitle.trim(),subtitle:aSub.trim()||"Future",status:"open",winner:null,maxBet:aMax?parseFloat(aMax):null,
-        options:valid.map((o,i)=>({id:`${fid}_${i}`,label:o.label.trim(),odds:parseInt(o.odds)}))});
+      const valid = futureOptions.filter(o => o.label.trim() && o.odds);
+      if (valid.length < 2) { notify("At least 2 options required", "error"); return; }
+      const opts = valid.map((o, i) => ({ id: `${newId}_${i}`, label: o.label.trim(), odds: parseInt(o.odds) }));
+      newMarketsToAdd.push({ id: newId, type: "future", title: addTitle.trim(), subtitle: addSubtitle.trim() || "Custom Market", status: "open", winner: null, maxBet: addMaxBet ? parseFloat(addMaxBet) : null, options: opts });
     }
-    await saveMarkets({games:addType==="game"?[...markets.games,...toAdd]:markets.games,futures:addType==="future"?[...markets.futures,...toAdd]:markets.futures});
-    setATitle("");setASub("");setAA("");setAOddsA("");setAB("");setAOddsB("");setAMax("");
-    setASpread("");setASpOddsA("-110");setASpOddsB("-110");setAOU("");setAOvOdds("-110");setAUnOdds("-110");
-    setFutOpts([{label:"",odds:""},{label:"",odds:""}]);
-    notify(`${toAdd.length} market${toAdd.length>1?"s":""} added! ${I.ok}`);
+    await saveMarkets({ games: addType === "game" ? [...markets.games, ...newMarketsToAdd] : markets.games, futures: addType === "future" ? [...markets.futures, ...newMarketsToAdd] : markets.futures });
+    setAddTitle(""); setAddSubtitle(""); setAddTeamA(""); setAddOddsA(""); setAddTeamB(""); setAddOddsB(""); setAddMaxBet("");
+    setAddSpread(""); setAddSpreadOddsA("-110"); setAddSpreadOddsB("-110");
+    setAddOU(""); setAddOverOdds("-110"); setAddUnderOdds("-110");
+    setFutureOptions([{ label: "", odds: "" }, { label: "", odds: "" }]);
+    notify(`${newMarketsToAdd.length} market${newMarketsToAdd.length > 1 ? "s" : ""} added! OK`);
   }
 
-  async function saveEdit(){
-    if(!editTitle.trim()){notify("Title required","error");return;}
-    const upd={...editingMkt,title:editTitle.trim(),subtitle:editSub.trim(),options:editOpts.map(o=>({...o,odds:parseInt(o.odds)})),maxBet:editMax?parseFloat(editMax):null};
-    const apply=m=>m.id===upd.id?upd:m;
-    await saveMarkets({games:markets.games.map(apply),futures:markets.futures.map(apply)});
-    setEditingMkt(null);notify(`Market updated ${I.ok}`);
+  async function deleteUser(name) {
+    const newUsers = { ...users }; delete newUsers[name];
+    await saveUsers(newUsers);
+    await saveBets(bets.filter(b => b.username !== name));
+    if (adjustingUser === name) setAdjustingUser(null);
+    notify(`${name} deleted`);
   }
 
-  // House P&L
-  const getMktPnl = mktId => {
-    const rel=bets.filter(b=>(b.betType==="straight"&&b.marketId===mktId||b.betType==="parlay"&&b.legs.some(l=>l.mktId===mktId||l.marketId===mktId))&&(b.status==="won"||b.status==="lost"));
-    const staked=rel.reduce((s,b)=>s+b.stake,0);
-    const paid=rel.filter(b=>b.status==="won").reduce((s,b)=>s+b.payout,0);
-    return {staked,paid,net:staked-paid,count:rel.length};
-  };
-  const getOptProj = (mktId,winOptId) => {
-    const straight=bets.filter(b=>b.status==="pending"&&b.betType==="straight"&&b.marketId===mktId);
-    const staked=straight.reduce((s,b)=>s+b.stake,0);
-    const paid=straight.filter(b=>b.optionId===winOptId).reduce((s,b)=>s+b.payout,0);
-    const busted=bets.filter(b=>b.status==="pending"&&b.betType==="parlay"&&b.legs.some(l=>(l.mktId===mktId||l.marketId===mktId)&&l.optionId!==winOptId)).reduce((s,b)=>s+b.stake,0);
-    return {net:(staked+busted)-paid};
-  };
-  const houseTotalNet=allMkts.filter(m=>m.status==="settled").reduce((s,m)=>s+getMktPnl(m.id).net,0);
+  async function applyBalanceAdjust(name) {
+    const delta = parseFloat(adjustAmt);
+    if (isNaN(delta)) { notify("Enter a number", "error"); return; }
+    await saveUsers({ ...users, [name]: { ...users[name], balance: Math.max(0, (users[name]?.balance || 0) + delta) } });
+    setAdjustingUser(null); setAdjustAmt("");
+    notify(`Balance adjusted by ${delta >= 0 ? "+" : ""}$${delta.toFixed(2)}`);
+  }
 
-  const getLifePnl = name => {
-    const res=bets.filter(b=>b.username===name&&(b.status==="won"||b.status==="lost"));
-    const staked=res.reduce((s,b)=>s+b.stake,0);
-    const ret=res.filter(b=>b.status==="won").reduce((s,b)=>s+b.payout,0);
-    return ret-staked;
-  };
+  async function saveSiteMaxBet() {
+    const val = siteMaxBetDraft.trim() ? parseFloat(siteMaxBetDraft) : null;
+    setSiteMaxBet(val);
+    await storageSet("mln_site_max_bet", val);
+    notify(val ? `Site max bet set to $${val}` : "Site max bet removed");
+  }
 
-  //  Render helpers 
-  const statusBadge = status => {
-    if(status==="paused") return <span style={B.pauseBadge}>{I.pause} Paused</span>;
-    if(status==="settled") return <span style={B.settledBadge}>Settled</span>;
-    return null;
-  };
+  async function toggleLeaderboard() {
+    const newVal = !leaderboardVisible;
+    setLeaderboardVisible(newVal);
+    await storageSet("mln_leaderboard_visible", newVal);
+    notify(newVal ? "Leaderboard visible to players" : "Leaderboard hidden from players");
+  }
 
-  //  Group game markets for sportsbook layout 
-  const groupGames = mkts => {
-    const groups=[],used=new Set();
-    for(const m of mkts){
-      if(used.has(m.id))continue;
-      const base=getBase(m.title);
-      if(m.title!==base)continue;
-      const sp=mkts.find(x=>x.title===`${base} - Spread`);
-      const ou=mkts.find(x=>x.title.startsWith(`${base} - O/U`));
-      [m.id,sp?.id,ou?.id].filter(Boolean).forEach(id=>used.add(id));
-      groups.push({ml:m,sp:sp||null,ou:ou||null});
-    }
-    for(const m of mkts){if(!used.has(m.id)){groups.push({ml:m,sp:null,ou:null});used.add(m.id);}}
-    return groups;
-  };
+  async function saveHeaderMsg() {
+    await storageSet("mln_header_msg", headerDraft.trim());
+    notify(headerDraft.trim() ? "Banner saved!" : "Banner cleared");
+  }
+
+  async function resetAll() {
+    await saveMarkets({ ...INITIAL_MARKETS }); await saveBets([]);
+    const r = {};
+    for (const u of Object.keys(users)) r[u] = { ...users[u], balance: STARTING_BALANCE };
+    await saveUsers(r); notify("Everything reset!");
+  }
 
   //  Loading 
-  if(loading) return(
-    <div style={{minHeight:"100vh",background:"#0a0f1a",display:"flex",alignItems:"center",justifyContent:"center"}}>
-      <div style={{width:10,height:10,borderRadius:"50%",background:"#3b82f6"}}/>
-    </div>
-  );
+
+  if (loading) return <div style={S.center}><div style={S.loadDot} /></div>;
 
   //  Login 
-  if(screen==="login") return(
-    <div style={{minHeight:"100vh",background:"#0a0f1a",display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:"#111827",border:"1px solid #1f2937",borderRadius:20,padding:"40px 32px",maxWidth:380,width:"100%",display:"flex",flexDirection:"column",gap:16,boxShadow:"0 24px 80px rgba(0,0,0,0.5)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
-          <span style={{fontSize:36}}>{I.ball}</span>
-          <div>
-            <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:26,letterSpacing:3,color:"#f9fafb",lineHeight:1}}>MLN BETTING</div>
-            <div style={{fontSize:11,color:"#6b7280",marginTop:2}}>Fake Money - Real Bragging Rights</div>
+
+  if (screen === "login") {
+    const name = inputName.trim();
+    return (
+      <div style={S.loginWrap}>
+        <div style={S.loginBg} />
+        <div style={S.loginCard}>
+          <div style={S.loginLogoRow}>
+            <span style={S.loginLogoIcon}>O</span>
+            <div>
+              <div style={S.loginLogoTitle}>MLN BETTING</div>
+              <div style={S.loginLogoSub}>Fake Money - Real Bragging Rights</div>
+            </div>
           </div>
+          <div style={S.loginDivider} />
+
+          {loginStep === "name" && (
+            <>
+              <label style={S.loginLabel}>PLAYER NAME</label>
+              <input style={S.input} placeholder="Enter your name..." value={inputName}
+                onChange={e => setInputName(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && inputName.trim() && handleNameSubmit()} />
+              <button style={{ ...S.btnPrimary, opacity: inputName.trim() ? 1 : 0.4 }} onClick={handleNameSubmit} disabled={!inputName.trim()}>Continue</button>
+              <button style={S.btnGhost} onClick={() => setScreen("admin")}>Admin Panel</button>
+            </>
+          )}
+
+          {loginStep === "pin_login" && (
+            <>
+              <div style={{ textAlign: "center", marginBottom: 4 }}>
+                <span style={{ fontSize: 13.0, color: "#64748b" }}>Welcome back, </span>
+                <span style={{ fontSize: 13.0, color: "#6366f1", fontWeight: 700 }}>{name}</span>
+              </div>
+              <PinPad value={pinInput} onChange={p => { setPinInput(p); if (pinError) setPinError(""); }} label="Enter your PIN" error={pinError} />
+              <button style={S.btnGhost} onClick={resetLoginToName}>Back</button>
+            </>
+          )}
+
+          {loginStep === "pin_create" && (
+            <>
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 14px" }}>
+                <p style={{ margin: "0 0 4px", fontSize: 14.0, color: "#16a34a", fontWeight: 700 }}>Account not found</p>
+                <p style={{ margin: "0 0 8px", fontSize: 13.0, color: "#64748b" }}>No account for <strong style={{ color: "#1e293b" }}>{name}</strong>. Names are case-sensitive - double-check your spelling.</p>
+                <p style={{ margin: 0, fontSize: 12.0, color: "#16a34a" }}>If this is your first time, create an account below.</p>
+              </div>
+              <PinPad value={pinInput} onChange={setPinInput} label="Choose a 4-digit PIN" sublabel="You'll use this every time you log in" />
+              <button style={S.btnGhost} onClick={resetLoginToName}>Back</button>
+            </>
+          )}
+
+          {loginStep === "pin_confirm" && (
+            <>
+              <PinPad value={pinInput} onChange={p => { setPinInput(p); if (pinError) setPinError(""); }} label="Confirm your PIN" sublabel="Enter it again to confirm" error={pinError} />
+              <button style={S.btnGhost} onClick={() => { setLoginStep("pin_create"); setPinInput(""); setPinError(""); }}>Back</button>
+            </>
+          )}
         </div>
-        <div style={{height:1,background:"#1f2937"}}/>
-
-        {loginStep==="name"&&<>
-          <label style={S.lbl}>PLAYER NAME</label>
-          <input style={S.inp} placeholder="Enter your name..." value={inputName}
-            onChange={e=>setInputName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&inputName.trim()&&submitName()}/>
-          <button style={{...S.btnPrimary,opacity:inputName.trim()?1:0.4}} onClick={submitName} disabled={!inputName.trim()}>Continue</button>
-          <button style={S.btnGhost} onClick={()=>setScreen("admin")}>Admin Panel</button>
-        </>}
-
-        {loginStep==="pin_login"&&<>
-          <div style={{textAlign:"center",fontSize:12,color:"#9ca3af"}}>Welcome back, <span style={{color:"#60a5fa",fontWeight:700}}>{inputName}</span></div>
-          <PinPad value={pinVal} onChange={p=>{setPinVal(p);if(pinErr)setPinErr("");}} label="Enter your PIN" error={pinErr}/>
-          <button style={S.btnGhost} onClick={()=>{setLoginStep("name");setPinVal("");setPinErr("");}}>Back</button>
-        </>}
-
-        {loginStep==="pin_create"&&<>
-          <div style={{background:"#052e16",border:"1px solid #166534",borderRadius:10,padding:"12px 14px"}}>
-            <div style={{fontSize:13,color:"#4ade80",fontWeight:700,marginBottom:4}}>Account not found</div>
-            <div style={{fontSize:12,color:"#9ca3af",marginBottom:6}}><strong style={{color:"#f9fafb"}}>{inputName}</strong> - Names are case-sensitive. Double-check spelling.</div>
-            <div style={{fontSize:11,color:"#4ade80"}}>First time? Create an account below.</div>
-          </div>
-          <PinPad value={pinVal} onChange={setPinVal} label="Choose a 4-digit PIN" sublabel="You'll use this to log in"/>
-          <button style={S.btnGhost} onClick={()=>{setLoginStep("name");setPinVal("");setPinErr("");}}>Back</button>
-        </>}
-
-        {loginStep==="pin_confirm"&&<>
-          <PinPad value={pinVal} onChange={p=>{setPinVal(p);if(pinErr)setPinErr("");}} label="Confirm your PIN" error={pinErr}/>
-          <button style={S.btnGhost} onClick={()=>{setLoginStep("pin_create");setPinVal("");setPinErr("");}}>Back</button>
-        </>}
       </div>
-      {notif&&<Toast n={notif}/>}
-    </div>
-  );
+    );
+  }
 
   //  Admin 
-  if(screen==="admin") return(
-    <div style={{minHeight:"100vh",background:"#0a0f1a",color:"#f9fafb",fontFamily:"'Inter',sans-serif",padding:"20px 16px"}}>
-      <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:24}}>
-        <button style={S.btnGhost} onClick={()=>{setAdminOk(false);setAdminPin("");setScreen("login");}}>Back</button>
-        <div>
-          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:20,letterSpacing:3,color:"#f9fafb"}}>ADMIN</div>
-          <div style={{fontSize:11,color:"#6b7280"}}>MLN Betting</div>
+
+  if (screen === "admin") return (
+    <div style={S.adminWrap}>
+      <div style={S.adminHeader}>
+        <button style={S.backBtn} onClick={() => { setAdminUnlocked(false); setAdminPin(""); setScreen("login"); }}>Back</button>
+        <div style={S.adminTitleRow}>
+          <span style={S.adminTitle}>ADMIN</span>
+          <span style={S.adminTitleSub}>MLN Betting</span>
         </div>
       </div>
 
-      {!adminOk?(
-        <div style={{display:"flex",flexDirection:"column",gap:12,maxWidth:300}}>
-          <div style={{fontSize:13,color:"#9ca3af"}}>Enter admin PIN</div>
-          <input style={S.inp} type="password" placeholder="PIN" value={adminPin}
-            onChange={e=>setAdminPin(e.target.value)}
-            onKeyDown={e=>e.key==="Enter"&&(adminPin===ADMIN_PIN?setAdminOk(true):notify("Wrong PIN","error"))}/>
-          <button style={S.btnPrimary} onClick={()=>adminPin===ADMIN_PIN?setAdminOk(true):notify("Wrong PIN","error")}>Unlock</button>
+      {!adminUnlocked ? (
+        <div style={S.pinWrap}>
+          <p style={S.pinLabel}>Enter admin PIN to unlock</p>
+          <input style={S.input} type="password" placeholder="PIN" value={adminPin}
+            onChange={e => setAdminPin(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && (adminPin === ADMIN_PIN ? setAdminUnlocked(true) : notify("Wrong PIN", "error"))} />
+          <button style={S.btnPrimary} onClick={() => adminPin === ADMIN_PIN ? setAdminUnlocked(true) : notify("Wrong PIN", "error")}>Unlock</button>
         </div>
-      ):(
+      ) : (
         <>
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:20}}>
-            {[[`${I.scales} Settle`,"settle"],[`${I.people} Players`,"players"],[`${I.plus} Add`,"add"],[`${I.pencil} Edit`,"edit"],[`${I.clipboard} Bets`,"bets"],[`${I.warn} Danger`,"danger"]].map(([l,k])=>(
-              <button key={k} style={{...S.adminTab,...(adminTab===k?{background:"#3b82f6",color:"#f9fafb",borderColor:"#3b82f6"}:{})}}
-                onClick={()=>{setAdminTab(k);setEditingMkt(null);}}>{l}</button>
+          <div style={S.adminTabRow}>
+            {[["settle",`${I.scales} Settle`],["players",`${I.people} Players`],["add",`${I.plus} Add`],["edit",`${I.pencil} Edit`],["bets",`${I.clipboard} Bets`],["danger",`${I.warn} Danger`]].map(([key, label]) => (
+              <button key={key} style={{ ...S.adminTab, ...(adminTab === key ? S.adminTabActive : {}) }} onClick={() => { setAdminTab(key); setEditingMarket(null); }}>{label}</button>
             ))}
           </div>
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={S.adminContent}>
 
-            {adminTab==="settle"&&<>
-              {/* House P&L */}
-              <div style={{...S.card,background:houseTotalNet>=0?"#052e16":"#1c0a0a",border:`1px solid ${houseTotalNet>=0?"#166534":"#7f1d1d"}`}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <div style={S.sHead}>HOUSE TAKE (ALL TIME)</div>
-                  <div style={{fontSize:24,fontWeight:800,color:houseTotalNet>=0?"#4ade80":"#f87171",fontFamily:"'Barlow Condensed',sans-serif"}}>
-                    {houseTotalNet>=0?"+":""}${houseTotalNet.toFixed(2)}
+            {/* -- SETTLE TAB -- */}
+            {adminTab === "settle" && (
+              <>
+                {/* House P&L summary */}
+                <div style={{ ...S.adminSection, background: houseTotalNet >= 0 ? "#f0fdf4" : "#fff1f2", border: `1px solid ${houseTotalNet >= 0 ? "#bbf7d0" : "#fecaca"}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <p style={{ ...S.sectionHead, margin: 0 }}>HOUSE TAKE (ALL TIME)</p>
+                    <span style={{ fontSize: 23.0, fontWeight: 700, color: houseTotalNet >= 0 ? "#16a34a" : "#ef4444" }}>
+                      {houseTotalNet >= 0 ? "+" : ""}${houseTotalNet.toFixed(2)}
+                    </span>
                   </div>
+                  <p style={{ margin: "6px 0 0", fontSize: 11.0, color: "#94a3b8" }}>
+                    Across {allMarkets.filter(m => m.status === "settled").length} settled markets
+                  </p>
                 </div>
-                <div style={{fontSize:11,color:"#4b5563",marginTop:4}}>{allMkts.filter(m=>m.status==="settled").length} settled markets</div>
-              </div>
 
-              {/* Pause all */}
-              <div style={{display:"flex",gap:8}}>
-                <button style={{...S.btnWarn,flex:1}} onClick={pauseAll}>{I.pause} Pause All</button>
-                <button style={{...S.settleBtn,flex:1,textAlign:"center"}} onClick={openAll}>{I.play} Open All</button>
-              </div>
+                {/* Pause all */}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button style={{ ...S.settleBtn, flex: 1, textAlign: "center", background: "#fffbeb", borderColor: "#fde68a", color: "#d97706" }} onClick={pauseAllMarkets}>{I.pause} Pause All Markets</button>
+                  <button style={{ ...S.settleBtn, flex: 1, textAlign: "center" }} onClick={unpauseAllMarkets}>{I.play} Open All Markets</button>
+                </div>
 
-              {/* Markets */}
-              <div style={S.card}>
-                <div style={S.sHead}>SETTLE MARKETS</div>
-                {allMkts.map(m=>{
-                  const pnl=m.status==="settled"?getMktPnl(m.id):null;
-                  const mTotal=m.options.reduce((s,o)=>s+(optTotals[o.id]||0),0);
-                  return(
-                    <div key={m.id} style={{background:"#0a0f1a",border:"1px solid #1f2937",borderRadius:10,padding:14,marginBottom:10}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                        <div style={{fontSize:13,fontWeight:700,color:"#f9fafb",flex:1,paddingRight:8}}>{m.title}</div>
-                        <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
-                          {statusBadge(m.status)}
+                {/* Settle markets */}
+                <div style={S.adminSection}>
+                  <p style={S.sectionHead}>SETTLE MARKETS</p>
+                  {allMarkets.map(market => {
+                    const pnl = market.status === "settled" ? getMarketPnl(market.id) : null;
+                    const mTotal = market.options.reduce((s, o) => s + (optionTotals[o.id] || 0), 0);
+                    return (
+                      <div key={market.id} style={S.settleCard}>
+                        <div style={S.settleTitle}>
+                          <span>{market.title}</span>
+                          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            {market.status === "settled" && <span style={S.settledBadge}>SETTLED</span>}
+                            {market.status === "paused" && <span style={S.pausedBadge}>{I.pause} PAUSED</span>}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Money distribution */}
-                      {mTotal>0&&m.status!=="settled"&&(
-                        <div style={{marginBottom:10}}>
-                          {m.options.map(opt=>{
-                            const amt=optTotals[opt.id]||0;const pct=mTotal>0?amt/mTotal:0;
-                            const proj=getOptProj(m.id,opt.id);
-                            return(
-                              <div key={opt.id} style={{background:"#111827",borderRadius:6,padding:"7px 10px",marginBottom:6}}>
-                                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,marginBottom:4}}>
-                                  <span style={{fontWeight:600,color:"#e5e7eb"}}>{opt.label} <span style={{color:"#60a5fa"}}>{fmt(opt.odds)}</span></span>
-                                  <span style={{color:proj.net>=0?"#4ade80":"#f87171",fontWeight:700}}>
-                                    If wins: {proj.net>=0?"+":""}${proj.net.toFixed(2)} house
-                                  </span>
+                        {/* Money distribution in admin */}
+                        {mTotal > 0 && market.status !== "settled" && (
+                          <div style={{ marginBottom: 10 }}>
+                            {market.options.map(opt => {
+                              const amt = optionTotals[opt.id] || 0;
+                              const pct = mTotal > 0 ? amt / mTotal : 0;
+                              const proj = getOptionProjection(market.id, opt.id);
+                              const projNet = proj.net;
+                              return (
+                                <div key={opt.id} style={{ marginBottom: 8, background: "#f8fafc", borderRadius: 6, padding: "7px 10px" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.0, color: "#64748b", marginBottom: 4 }}>
+                                    <span style={{ fontWeight: 700, color: "#374151" }}>{opt.label}</span>
+                                    <span style={{ color: "#6366f1" }}>{fmt(opt.odds)}</span>
+                                  </div>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.0, color: "#64748b", marginBottom: 4 }}>
+                                    <span>Action: ${amt.toFixed(0)} ({Math.round(pct * 100)}%)</span>
+                                    <span style={{ fontWeight: 700, color: projNet >= 0 ? "#16a34a" : "#ef4444" }}>
+                                      If wins: {projNet >= 0 ? "+" : ""}${projNet.toFixed(2)} house
+                                    </span>
+                                  </div>
+                                  <div style={S.moneyBar}><div style={{ ...S.moneyBarFill, width: `${pct * 100}%`, background: "#58a6ff" }} /></div>
                                 </div>
-                                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#6b7280",marginBottom:5}}>
-                                  <span>${amt.toFixed(0)} action ({Math.round(pct*100)}%)</span>
-                                </div>
-                                <div style={{height:3,background:"#1f2937",borderRadius:2,overflow:"hidden"}}>
-                                  <div style={{height:"100%",width:`${pct*100}%`,background:"#3b82f6",borderRadius:2,opacity:0.7}}/>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          <div style={{fontSize:10,color:"#4b5563",marginTop:2}}>Total action: ${mTotal.toFixed(0)}</div>
-                        </div>
-                      )}
+                              );
+                            })}
+                            <div style={{ fontSize: 11.0, color: "#94a3b8", marginTop: 2 }}>Total action: ${mTotal.toFixed(0)}</div>
+                          </div>
+                        )}
 
-                      {/* Pause toggle */}
-                      {(m.status==="open"||m.status==="paused")&&(
-                        <div style={{marginBottom:8,display:"flex",justifyContent:"flex-end"}}>
-                          <button style={m.status==="paused"?S.settleBtn:S.btnWarnSm} onClick={()=>togglePauseMkt(m.id)}>
-                            {m.status==="paused"?`${I.play} Open`:`${I.pause} Pause`}
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Settle/Unsettle */}
-                      {(m.status==="open"||m.status==="paused")?(
-                        <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                          {m.options.map(opt=>{
-                            const isElim=(m.eliminated||[]).includes(opt.id);
-                            if(isElim)return(
-                              <div key={opt.id} style={{padding:"8px 12px",background:"#1c0a0a",border:"1px solid #7f1d1d",borderRadius:8,fontSize:12,color:"#f87171",opacity:0.6}}>
-                                {I.cross} {opt.label} — Eliminated
-                              </div>
-                            );
-                            return(
-                              <div key={opt.id} style={{display:"flex",gap:6}}>
-                                <button style={{...S.settleBtn,flex:1}} onClick={()=>settleMarket(m.id,opt.id)}>
-                                  {I.check} {opt.label}
-                                </button>
-                                {m.type==="future"&&(
-                                  <button style={{...S.btnDangerSm}} onClick={()=>{if(window.confirm(`Eliminate ${opt.label}?`))eliminateOption(m.id,opt.id);}}>
-                                    {I.cross} Out
-                                  </button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      ):(
-                        <>
-                          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                            <span style={{fontSize:13,color:"#60a5fa",fontWeight:700}}>{I.trophy} {m.options.find(o=>o.id===m.winner)?.label}</span>
-                            <button style={{...S.btnDangerSm,borderColor:"#7e22ce",color:"#a855f7",background:"rgba(168,85,247,0.1)"}}
-                              onClick={()=>{if(window.confirm(`Unsettle "${m.title}"? This reverses all payouts.`))unsettleMarket(m.id);}}>
-                              {I.undo} Unsettle
+                        {/* Pause/open toggle for open/paused markets */}
+                        {(market.status === "open" || market.status === "paused") && (
+                          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 8 }}>
+                            <button style={{ ...S.settleBtn, background: market.status === "paused" ? "#0a1a0e" : "#1c1200", borderColor: market.status === "paused" ? "#166534" : "#92400e", color: market.status === "paused" ? "#4ade80" : "#f59e0b", fontSize: 12.0 }} onClick={() => togglePauseMarket(market.id)}>
+                              {market.status === "paused" ? "> Open Betting" : `${I.pause} Pause Betting`}
                             </button>
                           </div>
-                          {pnl&&(
-                            <div style={{cursor:"pointer",borderRadius:6,padding:"6px 8px",background:"#111827"}}
-                              onClick={()=>setExpandedPnl(expandedPnl===m.id?null:m.id)}>
-                              <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
-                                <span style={{color:"#6b7280"}}>{expandedPnl===m.id?"Hide":"Show"} house P&L</span>
-                                <span style={{fontWeight:700,color:pnl.net>=0?"#4ade80":"#f87171"}}>{pnl.net>=0?"+":""}${pnl.net.toFixed(2)}</span>
+                        )}
+
+                        {market.status === "open" || market.status === "paused" ? (
+                          <div style={S.settleOptions}>
+                            {market.options.map(opt => {
+                              const isElim = (market.eliminated || []).includes(opt.id);
+                              if (isElim) {
+                                return (
+                                  <div key={opt.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 14px", background: "#fff1f2", border: "1px solid #fecaca", borderRadius: 8, opacity: 0.6 }}>
+                                    <span style={{ fontSize: 13.0, color: "#ef4444", fontWeight: 600 }}>x {opt.label}</span>
+                                    <span style={{ fontSize: 11.0, color: "#ef4444", marginLeft: "auto" }}>ELIMINATED</span>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div key={opt.id} style={{ display: "flex", gap: 6 }}>
+                                  <button style={{ ...S.settleBtn, flex: 1 }} onClick={() => settleMarket(market.id, opt.id)}>v {opt.label}</button>
+                                  {market.type === "future" && (
+                                    <button
+                                      style={{ ...S.settleBtn, background: "#fff1f2", borderColor: "#fecaca", color: "#ef4444", padding: "9px 12px", flex: "0 0 auto" }}
+                                      onClick={() => { if (window.confirm(`Eliminate ${opt.label}? Pending bets on them are marked as losses. Historical bets are preserved.`)) eliminateOption(market.id, opt.id); }}>
+                                      x Out
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })}
+                            <button
+                              style={{ ...S.settleBtn, background: "#fffbeb", borderColor: "#fde68a", color: "#d97706", marginTop: 4, textAlign: "center" }}
+                              onClick={() => { if (window.confirm(`Push "${market.title}"? All pending bets get their stake refunded. For parlays, this leg is removed and odds recalculated.`)) pushMarket(market.id); }}>
+                              {I.undo} Push / Tie (Refund All)
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                              <p style={S.winnerText}>{market.winner === "push" ? `${I.undo} PUSH — All bets refunded` : `${I.trophy} ${market.options.find(o => o.id === market.winner)?.label}`}</p>
+                              <button style={{ ...S.settleBtn, background: "#faf5ff", borderColor: "#7f1d7f", color: "#9333ea", fontSize: 12.0, padding: "6px 12px" }}
+                                onClick={() => { if (window.confirm(`Unsettle "${market.title}"? This reverses all payouts.`)) unsettleMarket(market.id); }}>
+                                Unsettle
+                              </button>
+                            </div>
+                            {/* P&L for settled market */}
+                            <div
+                              style={{ cursor: "pointer", background: expandedSettled === market.id ? "#f8fafc" : "transparent", borderRadius: 6, padding: expandedSettled === market.id ? "8px 10px" : "0" }}
+                              onClick={() => setExpandedSettled(expandedSettled === market.id ? null : market.id)}>
+                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                <span style={{ fontSize: 11.0, color: "#94a3b8" }}>{expandedSettled === market.id ? "^ hide" : "v house P&L"}</span>
+                                {pnl && <span style={{ fontSize: 13.0, fontWeight: 700, color: pnl.net >= 0 ? "#16a34a" : "#ef4444" }}>{pnl.net >= 0 ? "+" : ""}${pnl.net.toFixed(2)}</span>}
                               </div>
-                              {expandedPnl===m.id&&(
-                                <div style={{marginTop:8,fontSize:11,color:"#9ca3af",display:"flex",flexDirection:"column",gap:3}}>
-                                  <div style={{display:"flex",justifyContent:"space-between"}}><span>Total staked</span><span>${pnl.staked.toFixed(2)}</span></div>
-                                  <div style={{display:"flex",justifyContent:"space-between"}}><span>Total paid out</span><span>${pnl.paid.toFixed(2)}</span></div>
-                                  <div style={{display:"flex",justifyContent:"space-between"}}><span>Bets resolved</span><span>{pnl.count}</span></div>
-                                  <div style={{display:"flex",justifyContent:"space-between",fontWeight:700,color:pnl.net>=0?"#4ade80":"#f87171",borderTop:"1px solid #1f2937",paddingTop:4,marginTop:2}}>
-                                    <span>Net house {pnl.net>=0?"take":"loss"}</span>
-                                    <span>{pnl.net>=0?"+":""}${pnl.net.toFixed(2)}</span>
+                              {expandedSettled === market.id && pnl && (
+                                <div style={{ marginTop: 8, fontSize: 12.0, color: "#64748b", display: "flex", flexDirection: "column", gap: 3 }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Total staked</span><span>${pnl.totalStaked.toFixed(2)}</span></div>
+                                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Total paid out</span><span>${pnl.totalPaid.toFixed(2)}</span></div>
+                                  <div style={{ display: "flex", justifyContent: "space-between" }}><span>Bets resolved</span><span>{pnl.betCount}</span></div>
+                                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, color: pnl.net >= 0 ? "#16a34a" : "#ef4444", borderTop: "1px solid #f1f5f9", paddingTop: 4, marginTop: 2 }}>
+                                    <span>Net house {pnl.net >= 0 ? "take" : "loss"}</span>
+                                    <span>{pnl.net >= 0 ? "+" : ""}${pnl.net.toFixed(2)}</span>
                                   </div>
                                 </div>
                               )}
                             </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </>}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
-            {adminTab==="players"&&(
-              <div style={S.card}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                  <div style={S.sHead}>PLAYERS ({lb.length})</div>
-                  <button style={{...S.adminTab,...(lbVisible?{color:"#4ade80",borderColor:"#166534",background:"#052e16"}:{color:"#fbbf24",borderColor:"#92400e",background:"#1c1200"})}}
-                    onClick={async()=>{const v=!lbVisible;setLbVisible(v);await fbSet("mln_leaderboard_visible",v);notify(v?"Standings visible":"Standings hidden");}}>
-                    {lbVisible?`${I.eye} Standings ON`:`${I.noSee} Standings OFF`}
+            {/* -- PLAYERS TAB -- */}
+            {adminTab === "players" && (
+              <div style={S.adminSection}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <p style={{ ...S.sectionHead, margin: 0 }}>PLAYERS ({leaderboard.length})</p>
+                  <button onClick={toggleLeaderboard} style={{ ...S.adjustBtn, fontSize: 11.0, padding: "5px 12px", color: leaderboardVisible ? "#4ade80" : "#f59e0b", borderColor: leaderboardVisible ? "#166534" : "#92400e", background: leaderboardVisible ? "#0a1a0e" : "#1c1200" }}>
+                    {leaderboardVisible ? `${I.eye} Standings ON` : `${I.noSee} Standings OFF`}
                   </button>
                 </div>
-                {lb.map(({name,u,pending,total,rank})=>{
-                  const isTied=lb.filter(p=>p.rank===rank).length>1;
-                  const pnl=getLifePnl(name);
-                  const joined=u.createdAt?fmtDate(u.createdAt):"?";
-                  return(
+                {leaderboard.length === 0 && <p style={S.emptyText}>No players yet</p>}
+                {leaderboard.map(({ name, u, pendingAmt, total, _rank }) => {
+                  const pnl = getPlayerLifetimePnl(name);
+                  const isTied = leaderboard.filter(p => p._rank === _rank).length > 1;
+                  const joined = u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Unknown";
+                  return (
                     <div key={name}>
-                      <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"10px 0",borderBottom:"1px solid #1f2937",flexWrap:"wrap"}}>
-                        <span style={{fontSize:15,fontWeight:700,color:"#f9fafb",width:36,flexShrink:0,paddingTop:2}}>{isTied?`T${rank}`:`#${rank}`}</span>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontSize:14,fontWeight:600,color:"#f9fafb",marginBottom:2}}>{name}</div>
-                          <div style={{fontSize:10,color:"#6b7280"}}>Joined {joined}</div>
+                      <div style={{ ...S.leaderRow, alignItems: "flex-start", paddingTop: 10, paddingBottom: 10 }}>
+                        {/* Rank */}
+                        <span style={{ fontSize: 16.0, fontWeight: 700, color: "#ffffff", width: 34, flexShrink: 0, paddingTop: 2 }}>
+                          {isTied ? `T${_rank}` : `#${_rank}`}
+                        </span>
+                        {/* Name + joined */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 15.0, fontWeight: 600, color: "#1e293b", marginBottom: 2 }}>{name}</div>
+                          <div style={{ fontSize: 11.0, color: "#94a3b8" }}>Joined {joined}</div>
                         </div>
-                        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2,marginRight:8}}>
-                          <span style={{fontSize:15,fontWeight:700,color:"#f9fafb"}}>${total.toFixed(2)}</span>
-                          <div style={{display:"flex",gap:6}}>
-                            <span style={{fontSize:10,color:"#4ade80"}}>${u.balance.toFixed(0)} cash</span>
-                            {pending>0&&<span style={{fontSize:10,color:"#fbbf24"}}>${pending.toFixed(0)} bets</span>}
+                        {/* Balances */}
+                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2, marginRight: 8 }}>
+                          <span style={{ fontSize: 15.0, fontWeight: 700, color: "#ffffff" }}>${total.toFixed(2)}</span>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <span style={{ fontSize: 11.0, color: "#16a34a" }}>${u.balance.toFixed(0)} cash</span>
+                            {pendingAmt > 0 && <span style={{ fontSize: 11.0, color: "#d97706" }}>${pendingAmt.toFixed(0)} bets</span>}
                           </div>
-                          <span style={{fontSize:11,fontWeight:700,color:pnl>=0?"#4ade80":"#f87171"}}>{pnl>=0?"Up":"Down"} ${Math.abs(pnl).toFixed(2)} lifetime</span>
+                          <span style={{ fontSize: 12.0, fontWeight: 700, color: pnl >= 0 ? "#16a34a" : "#ef4444" }}>
+                            {pnl >= 0 ? "^" : "v"} ${Math.abs(pnl).toFixed(2)} lifetime
+                          </span>
                         </div>
-                        <div style={{display:"flex",flexDirection:"column",gap:4}}>
-                          <button style={S.adjBtn} onClick={()=>notify(`${name}'s PIN: ${u.pin||"none"}`)}>PIN</button>
-                          <button style={S.adjBtn} onClick={()=>{setAdjUser(adjUser===name?null:name);setAdjAmt("");}}>+/-</button>
-                          <button style={{...S.adjBtn,color:"#f87171",borderColor:"#7f1d1d"}} onClick={()=>{if(window.confirm(`Delete ${name}?`))deleteUser(name);}}>Del</button>
+                        {/* Actions */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <button style={{ ...S.adjustBtn, fontSize: 11.0, padding: "3px 8px" }} onClick={() => notify(`${name}'s PIN: ${u.pin || "none"}`, "success")}>PIN</button>
+                          <button style={S.adjustBtn} onClick={() => { setAdjustingUser(adjustingUser === name ? null : name); setAdjustAmt(""); }}>+/-</button>
+                          <button style={{ ...S.adjustBtn, fontSize: 11.0, padding: "3px 8px", color: "#ef4444", borderColor: "#fecaca", background: "#fff1f2" }} onClick={() => { if (window.confirm(`Delete ${name}?`)) deleteUser(name); }}>x</button>
                         </div>
                       </div>
-                      {adjUser===name&&(
-                        <div style={{display:"flex",gap:8,padding:"8px 0 12px",borderBottom:"1px solid #1f2937"}}>
-                          <input style={{...S.inp,flex:1}} type="number" placeholder="+100 or -50" value={adjAmt} onChange={e=>setAdjAmt(e.target.value)}/>
-                          <button style={S.btnPrimary} onClick={()=>applyAdj(name)}>Apply</button>
-                          <button style={S.btnGhost} onClick={()=>setAdjUser(null)}>Cancel</button>
+                      {adjustingUser === name && (
+                        <div style={S.adjustRow}>
+                          <input style={{ ...S.input, flex: 1 }} type="number" placeholder="+100 or -50" value={adjustAmt} onChange={e => setAdjustAmt(e.target.value)} />
+                          <button style={S.btnCreate} onClick={() => applyBalanceAdjust(name)}>Apply</button>
+                          <button style={S.btnRetry} onClick={() => setAdjustingUser(null)}>Cancel</button>
                         </div>
                       )}
                     </div>
@@ -875,92 +1092,86 @@ export default function App() {
               </div>
             )}
 
-            {adminTab==="add"&&(
-              <div style={S.card}>
-                <div style={S.sHead}>ADD MARKET</div>
-                <div style={{display:"flex",gap:8,marginBottom:14}}>
-                  {["game","future"].map(t=><button key={t} style={{...S.adminTab,...(addType===t?{background:"#3b82f6",color:"#f9fafb",borderColor:"#3b82f6"}:{})}} onClick={()=>setAddType(t)}>{t.charAt(0).toUpperCase()+t.slice(1)}</button>)}
-                </div>
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <div><label style={S.lbl}>TITLE</label><input style={S.inp} placeholder="Game or market name" value={aTitle} onChange={e=>setATitle(e.target.value)}/></div>
-                  <div><label style={S.lbl}>SUBTITLE</label><input style={S.inp} placeholder="League, round, etc." value={aSub} onChange={e=>setASub(e.target.value)}/></div>
-                  <div><label style={S.lbl}>MAX BET (optional)</label><input style={S.inp} placeholder="e.g. 200" value={aMax} onChange={e=>setAMax(e.target.value)}/></div>
-                  {addType==="game"?(
-                    <>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                        <div><label style={S.lbl}>TEAM A</label><input style={S.inp} placeholder="Name" value={aA} onChange={e=>setAA(e.target.value)}/></div>
-                        <div><label style={S.lbl}>TEAM A ODDS</label><input style={S.inp} placeholder="-110" value={aOddsA} onChange={e=>setAOddsA(e.target.value)}/></div>
-                        <div><label style={S.lbl}>TEAM B</label><input style={S.inp} placeholder="Name" value={aB} onChange={e=>setAB(e.target.value)}/></div>
-                        <div><label style={S.lbl}>TEAM B ODDS</label><input style={S.inp} placeholder="+110" value={aOddsB} onChange={e=>setAOddsB(e.target.value)}/></div>
-                      </div>
-                      <div>
-                        <label style={S.lbl}>SPREAD (optional)</label>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-                          <input style={S.inp} placeholder="-3.5" value={aSpread} onChange={e=>setASpread(e.target.value)}/>
-                          <input style={S.inp} placeholder="A odds" value={aSpOddsA} onChange={e=>setASpOddsA(e.target.value)}/>
-                          <input style={S.inp} placeholder="B odds" value={aSpOddsB} onChange={e=>setASpOddsB(e.target.value)}/>
-                        </div>
-                      </div>
-                      <div>
-                        <label style={S.lbl}>OVER/UNDER (optional)</label>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
-                          <input style={S.inp} placeholder="7.5" value={aOU} onChange={e=>setAOU(e.target.value)}/>
-                          <input style={S.inp} placeholder="Over odds" value={aOvOdds} onChange={e=>setAOvOdds(e.target.value)}/>
-                          <input style={S.inp} placeholder="Under odds" value={aUnOdds} onChange={e=>setAUnOdds(e.target.value)}/>
-                        </div>
-                      </div>
-                    </>
-                  ):(
-                    <>
-                      <label style={S.lbl}>OPTIONS</label>
-                      {futOpts.map((o,i)=>(
-                        <div key={i} style={{display:"flex",gap:8,marginBottom:6}}>
-                          <input style={{...S.inp,flex:2}} placeholder={`Option ${i+1}`} value={o.label} onChange={e=>setFutOpts(p=>p.map((x,j)=>j===i?{...x,label:e.target.value}:x))}/>
-                          <input style={{...S.inp,flex:1}} placeholder="+350" value={o.odds} onChange={e=>setFutOpts(p=>p.map((x,j)=>j===i?{...x,odds:e.target.value}:x))}/>
-                          {futOpts.length>2&&<button style={{background:"rgba(239,68,68,0.1)",color:"#ef4444",border:"none",borderRadius:6,width:36,cursor:"pointer",fontSize:12}} onClick={()=>setFutOpts(p=>p.filter((_,j)=>j!==i))}>X</button>}
-                        </div>
-                      ))}
-                      <button style={{background:"transparent",border:"1px dashed #374151",color:"#6b7280",borderRadius:8,padding:10,cursor:"pointer",fontFamily:"inherit",fontSize:12}} onClick={()=>setFutOpts(p=>[...p,{label:"",odds:""}])}>+ Add Option</button>
-                    </>
-                  )}
-                  <button style={{...S.btnPrimary,marginTop:6}} onClick={handleAddMkt}>Add Market</button>
-                </div>
+            {/* -- ADD TAB -- */}
+            {adminTab === "add" && (
+              <div style={S.adminSection}>
+                <p style={S.sectionHead}>ADD NEW MARKET</p>
+                <div style={S.formRow}><label style={S.formLabel}>TYPE</label><div style={S.toggleRow}><button style={{ ...S.toggleBtn, ...(addType === "game" ? S.toggleBtnActive : {}) }} onClick={() => setAddType("game")}>Game</button><button style={{ ...S.toggleBtn, ...(addType === "future" ? S.toggleBtnActive : {}) }} onClick={() => setAddType("future")}>Future</button></div></div>
+                <div style={S.formRow}><label style={S.formLabel}>TITLE</label><input style={S.input} placeholder="e.g. Aruba Sea Serpents vs Raccoon City Outbreak" value={addTitle} onChange={e => setAddTitle(e.target.value)} /></div>
+                <div style={S.formRow}><label style={S.formLabel}>SUBTITLE <span style={{ color: "#64748b" }}>(optional)</span></label><input style={S.input} placeholder="e.g. Lunar League - Final" value={addSubtitle} onChange={e => setAddSubtitle(e.target.value)} /></div>
+                <div style={S.formRow}><label style={S.formLabel}>MAX BET <span style={{ color: "#64748b" }}>(optional)</span></label><input style={S.input} placeholder="e.g. 200" value={addMaxBet} onChange={e => setAddMaxBet(e.target.value)} /></div>
+                {addType === "game" ? (
+                  <><div style={S.formRow}><label style={S.formLabel}>MONEYLINE</label>
+                    {[["TEAM A", addTeamA, setAddTeamA, addOddsA, setAddOddsA],["TEAM B", addTeamB, setAddTeamB, addOddsB, setAddOddsB]].map(([lbl, tn, stn, od, sod]) => (
+                      <div key={lbl} style={{ ...S.oddsRow, marginBottom: 8 }}><input style={{ ...S.input, flex: 2 }} placeholder={lbl + " name"} value={tn} onChange={e => stn(e.target.value)} /><input style={{ ...S.input, flex: 1 }} placeholder="-110" value={od} onChange={e => sod(e.target.value)} /></div>
+                    ))}</div>
+                  <div style={S.formRow}>
+                    <label style={S.formLabel}>SPREAD <span style={{ color: "#94a3b8", fontWeight: 400, letterSpacing: 0 }}>(optional - creates separate market)</span></label>
+                    <div style={S.oddsRow}>
+                      <input style={{ ...S.input, flex: 1 }} placeholder="e.g. -3.5 (favors Team A)" value={addSpread} onChange={e => setAddSpread(e.target.value)} />
+                      <input style={{ ...S.input, flex: 1 }} placeholder="Team A odds" value={addSpreadOddsA} onChange={e => setAddSpreadOddsA(e.target.value)} />
+                      <input style={{ ...S.input, flex: 1 }} placeholder="Team B odds" value={addSpreadOddsB} onChange={e => setAddSpreadOddsB(e.target.value)} />
+                    </div>
+                  </div>
+                  <div style={S.formRow}>
+                    <label style={S.formLabel}>OVER / UNDER <span style={{ color: "#94a3b8", fontWeight: 400, letterSpacing: 0 }}>(optional - creates separate market)</span></label>
+                    <div style={S.oddsRow}>
+                      <input style={{ ...S.input, flex: 1 }} placeholder="Total line e.g. 7.5" value={addOU} onChange={e => setAddOU(e.target.value)} />
+                      <input style={{ ...S.input, flex: 1 }} placeholder="Over odds" value={addOverOdds} onChange={e => setAddOverOdds(e.target.value)} />
+                      <input style={{ ...S.input, flex: 1 }} placeholder="Under odds" value={addUnderOdds} onChange={e => setAddUnderOdds(e.target.value)} />
+                    </div>
+                  </div></>
+                ) : (
+                  <><label style={S.formLabel}>OPTIONS</label>{futureOptions.map((opt, i) => (<div key={i} style={{ ...S.oddsRow, marginBottom: 8, alignItems: "center" }}><input style={{ ...S.input, flex: 2 }} placeholder={`Option ${i + 1}`} value={opt.label} onChange={e => setFutureOptions(p => p.map((o, idx) => idx === i ? { ...o, label: e.target.value } : o))} /><input style={{ ...S.input, flex: 1 }} placeholder="+350" value={opt.odds} onChange={e => setFutureOptions(p => p.map((o, idx) => idx === i ? { ...o, odds: e.target.value } : o))} />{futureOptions.length > 2 && <button style={S.removeBtn} onClick={() => setFutureOptions(p => p.filter((_, idx) => idx !== i))}>x</button>}</div>))}<button style={S.addOptionBtn} onClick={() => setFutureOptions(p => [...p, { label: "", odds: "" }])}>+ Add Option</button></>
+                )}
+                <button style={{ ...S.btnPrimary, marginTop: 18, width: "100%" }} onClick={handleAddMarket}>Add Market</button>
               </div>
             )}
 
-            {adminTab==="edit"&&!editingMkt&&(
+            {/* -- EDIT TAB -- */}
+            {adminTab === "edit" && !editingMarket && (
               <>
-                <div style={S.card}>
-                  <div style={S.sHead}>SITE-WIDE MAX BET</div>
-                  <div style={{fontSize:12,color:"#9ca3af",marginBottom:10}}>Applies to every bet sitewide. Leave blank to remove limit. Current: {siteMax?`$${siteMax}`:"none"}</div>
-                  <div style={{display:"flex",gap:8}}>
-                    <input style={{...S.inp,flex:1}} type="number" placeholder="e.g. 200" value={siteMaxDraft} onChange={e=>setSiteMaxDraft(e.target.value)}/>
-                    <button style={S.btnPrimary} onClick={async()=>{const v=siteMaxDraft.trim()?parseFloat(siteMaxDraft):null;setSiteMax(v);await fbSet("mln_site_max_bet",v);notify(v?`Max bet: $${v}`:"Max bet removed");}}>
-                      {siteMaxDraft.trim()?"Set Limit":"Remove Limit"}
+                {/* Site-wide max bet */}
+                <div style={S.adminSection}>
+                  <p style={S.sectionHead}>SITE-WIDE MAX BET</p>
+                  <p style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>
+                    Applies to every bet placed by any player - overrides per-market limits downward. Leave blank for no limit.
+                    {siteMaxBet ? <strong style={{ color: "#6366f1" }}> Currently: ${siteMaxBet}</strong> : " Currently: no limit"}
+                  </p>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <input style={{ ...S.input, flex: 1 }} type="number" placeholder="e.g. 200" value={siteMaxBetDraft} onChange={e => setSiteMaxBetDraft(e.target.value)} />
+                    <button style={{ ...S.btnPrimary, flexShrink: 0 }} onClick={saveSiteMaxBet}>
+                      {siteMaxBetDraft.trim() ? "Set Limit" : "Remove Limit"}
                     </button>
                   </div>
                 </div>
-                <div style={S.card}>
-                  <div style={S.sHead}>LOBBY BANNER</div>
-                  <div style={{fontSize:12,color:"#9ca3af",marginBottom:10}}>Shown to all logged-in players. Leave blank to hide.</div>
-                  <textarea style={{...S.inp,minHeight:70,resize:"vertical"}} placeholder="e.g. Semifinals are LIVE! Place your bets before 7pm" value={bannerDraft} onChange={e=>setBannerDraft(e.target.value)}/>
-                  <button style={{...S.btnPrimary,marginTop:10,width:"100%"}} onClick={async()=>{await fbSet("mln_header_msg",bannerDraft.trim());notify(bannerDraft.trim()?"Banner saved":"Banner cleared");}}>
-                    {bannerDraft.trim()?"Save Banner":"Clear Banner"}
+
+                {/* Header message editor */}
+                <div style={S.adminSection}>
+                  <p style={S.sectionHead}>LOBBY BANNER MESSAGE</p>
+                  <p style={{ fontSize: 12.0, color: "#94a3b8", marginBottom: 10 }}>Shown to all players when they log in. Leave blank to hide.</p>
+                  <textarea style={{ ...S.input, minHeight: 70, resize: "vertical", lineHeight: 1.5 }} placeholder="e.g. Trophy Semifinals are LIVE - place your bets before 7pm!" value={headerDraft} onChange={e => setHeaderDraft(e.target.value)} />
+                  <button style={{ ...S.btnPrimary, marginTop: 10, width: "100%" }} onClick={saveHeaderMsg}>
+                    {headerDraft.trim() ? "Save Banner" : "Clear Banner"}
                   </button>
                 </div>
-                <div style={S.card}>
-                  <div style={S.sHead}>EDIT / PAUSE / REMOVE MARKETS</div>
-                  {allMkts.map(m=>(
-                    <div key={m.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid #1f2937",gap:8,flexWrap:"wrap"}}>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:13,fontWeight:600,color:"#f9fafb"}}>{m.title}</div>
-                        <div style={{fontSize:10,color:m.status==="paused"?"#fbbf24":"#6b7280"}}>{m.status==="paused"?`${I.pause} Paused`:m.subtitle}</div>
-                      </div>
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                        {(m.status==="open"||m.status==="paused")&&<button style={S.settleBtn} onClick={()=>{setEditingMkt(m);setEditTitle(m.title);setEditSub(m.subtitle);setEditOpts(m.options.map(o=>({...o})));setEditMax(m.maxBet!=null?String(m.maxBet):"");}}>Edit</button>}
-                        {(m.status==="open"||m.status==="paused")&&<button style={m.status==="paused"?S.settleBtn:S.btnWarnSm} onClick={()=>togglePauseMkt(m.id)}>{m.status==="paused"?`${I.play} Open`:`${I.pause} Pause`}</button>}
-                        {m.status!=="settled"&&<button style={S.btnDangerSm} onClick={()=>voidMkt(m.id)}>Void</button>}
-                        {m.status==="settled"&&<span style={B.settledBadge}>Settled</span>}
+                <div style={S.adminSection}>
+                  <p style={S.sectionHead}>EDIT / PAUSE / REMOVE MARKETS</p>
+                  {allMarkets.length === 0 && <p style={S.emptyText}>No markets</p>}
+                  {allMarkets.map(market => (
+                    <div key={market.id} style={S.settleCard}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <div><div style={{ fontSize: 14.0, fontWeight: 700, marginBottom: 2 }}>{market.title}</div><div style={{ fontSize: 11.0, color: market.status === "paused" ? "#f59e0b" : "#2e3a4e" }}>{market.status === "paused" ? "|| Paused" : market.subtitle}</div></div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                          {(market.status === "open" || market.status === "paused") && <button style={S.settleBtn} onClick={() => startEdit(market)}>Edit</button>}
+                          {(market.status === "open" || market.status === "paused") && (
+                            <button style={{ ...S.settleBtn, background: market.status === "paused" ? "#0a1a0e" : "#1a1408", borderColor: market.status === "paused" ? "#166534" : "#92400e", color: market.status === "paused" ? "#4ade80" : "#d97706" }} onClick={() => togglePauseMarket(market.id)}>
+                              {market.status === "paused" ? `${I.play} Open` : `${I.pause} Pause`}
+                            </button>
+                          )}
+                          {market.status !== "settled" && <button style={{ ...S.settleBtn, background: "#fff1f2", borderColor: "#fecaca", color: "#ef4444" }} onClick={() => voidMarket(market.id)}>Void</button>}
+                          {market.status === "settled" && <span style={S.settledBadge}>SETTLED</span>}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -968,356 +1179,390 @@ export default function App() {
               </>
             )}
 
-            {adminTab==="edit"&&editingMkt&&(
-              <div style={S.card}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-                  <div style={S.sHead}>EDITING MARKET</div>
-                  <button style={S.btnGhost} onClick={()=>setEditingMkt(null)}>Cancel</button>
+            {adminTab === "edit" && editingMarket && (
+              <div style={S.adminSection}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div>
+                    <p style={{ ...S.sectionHead, margin: 0 }}>EDITING MARKET</p>
+                    {editingMarket.status === "paused" && <p style={{ margin: "4px 0 0", fontSize: 11.0, color: "#d97706" }}>|| Currently paused</p>}
+                  </div>
+                  <button style={S.btnRetry} onClick={() => setEditingMarket(null)}>Cancel</button>
                 </div>
-                <div style={{display:"flex",flexDirection:"column",gap:12}}>
-                  <div><label style={S.lbl}>TITLE</label><input style={S.inp} value={editTitle} onChange={e=>setEditTitle(e.target.value)}/></div>
-                  <div><label style={S.lbl}>SUBTITLE</label><input style={S.inp} value={editSub} onChange={e=>setEditSub(e.target.value)}/></div>
-                  <div><label style={S.lbl}>MAX BET</label><input style={S.inp} placeholder="blank = none" value={editMax} onChange={e=>setEditMax(e.target.value)}/></div>
-                  <label style={S.lbl}>OPTIONS</label>
-                  {editOpts.map((o,i)=>(
-                    <div key={o.id} style={{display:"flex",gap:8}}>
-                      <input style={{...S.inp,flex:2}} value={o.label} onChange={e=>setEditOpts(p=>p.map((x,j)=>j===i?{...x,label:e.target.value}:x))}/>
-                      <input style={{...S.inp,flex:1}} value={o.odds} onChange={e=>setEditOpts(p=>p.map((x,j)=>j===i?{...x,odds:e.target.value}:x))}/>
-                    </div>
-                  ))}
-                  <button style={{...S.btnPrimary,marginTop:6}} onClick={saveEdit}>Save Changes</button>
-                </div>
+                <div style={S.formRow}><label style={S.formLabel}>TITLE</label><input style={S.input} value={editTitle} onChange={e => setEditTitle(e.target.value)} /></div>
+                <div style={S.formRow}><label style={S.formLabel}>SUBTITLE</label><input style={S.input} value={editSubtitle} onChange={e => setEditSubtitle(e.target.value)} /></div>
+                <div style={S.formRow}><label style={S.formLabel}>MAX BET <span style={{ color: "#64748b" }}>(blank = none)</span></label><input style={S.input} placeholder="e.g. 200" value={editMaxBet} onChange={e => setEditMaxBet(e.target.value)} /></div>
+                <label style={S.formLabel}>OPTIONS</label>
+                {editOptions.map((opt, i) => (<div key={opt.id} style={{ ...S.oddsRow, marginBottom: 8 }}><input style={{ ...S.input, flex: 2 }} value={opt.label} onChange={e => setEditOptions(p => p.map((o, idx) => idx === i ? { ...o, label: e.target.value } : o))} /><input style={{ ...S.input, flex: 1 }} value={opt.odds} onChange={e => setEditOptions(p => p.map((o, idx) => idx === i ? { ...o, odds: e.target.value } : o))} /></div>))}
+                <button style={{ ...S.btnPrimary, marginTop: 14, width: "100%" }} onClick={saveEdit}>Save Changes</button>
               </div>
             )}
 
-            {adminTab==="bets"&&(
-              <div style={S.card}>
-                <div style={S.sHead}>ALL BETS ({bets.length})</div>
-                {[...bets].reverse().map(b=>(
-                  <div key={b.id} style={{background:"#0a0f1a",border:"1px solid #1f2937",borderRadius:10,padding:12,marginBottom:8}}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                      <span style={{fontSize:13,fontWeight:700,color:"#60a5fa"}}>{b.username}</span>
-                      <span style={{fontSize:11,fontWeight:700,color:b.status==="won"?"#4ade80":b.status==="lost"?"#f87171":b.status==="voided"?"#9ca3af":"#fbbf24"}}>
-                        {b.status==="won"?`${I.check} WON`:b.status==="lost"?`${I.cross} LOST`:b.status==="voided"?`${I.undo} VOID`:`${I.pending} PENDING`}
-                      </span>
-                    </div>
-                    {b.betType==="parlay"?(
-                      <>
-                        <div style={{fontSize:10,color:"#60a5fa",marginBottom:4,letterSpacing:1}}>PARLAY - {fmt(b.combinedOdds)}</div>
-                        {b.legs.map((l,i)=><div key={i} style={{fontSize:12,color:"#9ca3af",marginBottom:2}}>{l.optionLabel} <span style={{color:"#fbbf24"}}>{fmt(l.odds)}</span></div>)}
-                      </>
-                    ):(
-                      <><div style={{fontSize:11,color:"#6b7280",marginBottom:2}}>{b.marketTitle}</div>
-                      <div style={{fontSize:13,fontWeight:600,color:"#f9fafb"}}>{b.optionLabel} <span style={{color:"#fbbf24"}}>{fmt(b.odds)}</span></div></>
-                    )}
-                    <div style={{display:"flex",gap:12,fontSize:11,color:"#6b7280",marginTop:6}}>
-                      <span>Stake <strong>${b.stake.toFixed(2)}</strong></span>
-                      <span>Payout <strong>${b.payout.toFixed(2)}</strong></span>
-                      <span style={{marginLeft:"auto"}}>{b.placedAt?fmtDate(b.placedAt):""}</span>
-                    </div>
+            {/* -- BETS TAB -- */}
+            {adminTab === "bets" && (
+              <div style={S.adminSection}>
+                <p style={S.sectionHead}>ALL BETS ({bets.length})</p>
+                {bets.length === 0 && <p style={S.emptyText}>No bets placed yet</p>}
+                {[...bets].reverse().map(b => (
+                  <div key={b.id} style={S.betRow}>
+                    <div style={S.betRowTop}><span style={S.betRowUser}>{b.username}</span><span style={{ fontSize: 12.0, fontWeight: 700, color: b.status === "won" ? "#16a34a" : b.status === "lost" ? "#ef4444" : b.status === "voided" ? "#94a3b8" : "#d97706" }}>{b.status === "won" ? `${I.check} WON` : b.status === "lost" ? `${I.cross} LOST` : b.status === "voided" ? `${I.undo} VOID` : `${I.pending} PENDING`}</span></div>
+                    {b.betType === "parlay" ? (<><div style={{ fontSize: 11.0, color: "#3b82f6", marginBottom: 4, letterSpacing: 1 }}>PARLAY - {fmt(b.combinedOdds)}</div>{b.legs.map((l, i) => (<div key={i} style={{ fontSize: 13.0, color: "#64748b", marginBottom: 2 }}>{l.optionLabel} <span style={{ color: "#6366f1" }}>{fmt(l.odds)}</span><span style={{ marginLeft: 6, fontSize: 11.0, color: l.status === "won" ? "#16a34a" : l.status === "lost" ? "#ef4444" : "#94a3b8" }}>{l.status === "won" ? "v" : l.status === "lost" ? "x" : "..."}</span></div>))}</>) : (<><div style={S.betRowMarket}>{b.marketTitle}</div><div style={S.betRowPick}>{b.optionLabel} <span style={{ color: "#6366f1" }}>{fmt(b.odds)}</span></div></>)}
+                    <div style={S.betRowAmounts}><span>Stake <strong>${b.stake.toFixed(2)}</strong></span><span>Payout <strong>${b.payout.toFixed(2)}</strong></span><span style={{ marginLeft: "auto", color: "#94a3b8" }}>{fmtTime(b.placedAt)}</span></div>
                   </div>
                 ))}
               </div>
             )}
 
-            {adminTab==="danger"&&(
-              <div style={S.card}>
-                <div style={S.sHead}>DANGER ZONE</div>
-                <p style={{color:"#9ca3af",fontSize:13,marginBottom:16}}>Resets all balances to ${START_BAL}, clears all bets, and restores default markets. PINs preserved.</p>
-                <button style={{background:"rgba(239,68,68,0.1)",color:"#ef4444",border:"1px solid rgba(239,68,68,0.3)",borderRadius:10,padding:"12px 20px",fontFamily:"inherit",fontSize:13,cursor:"pointer",width:"100%",fontWeight:700}}
-                  onClick={async()=>{
-                    await saveMarkets({...INIT_MARKETS});await saveBets([]);
-                    const r={};for(const u of Object.keys(users))r[u]={...users[u],balance:START_BAL};
-                    await saveUsers(r);notify("Everything reset!");
-                  }}>Reset Everything</button>
+            {/* -- DANGER TAB -- */}
+            {adminTab === "danger" && (
+              <div style={S.adminSection}>
+                <p style={S.sectionHead}>DANGER ZONE</p>
+                <p style={{ color: "#64748b", fontSize: 14.0, marginBottom: 16, lineHeight: 1.6 }}>Resets all balances to ${STARTING_BALANCE.toLocaleString()}, clears all bets, and restores default markets. PINs are preserved.</p>
+                <button style={S.btnDanger} onClick={resetAll}>Reset Everything</button>
               </div>
             )}
           </div>
         </>
       )}
-      {notif&&<Toast n={notif}/>}
+      {notification && <Toast n={notification} />}
     </div>
   );
 
   //  Lobby 
-  const displayMkts = tab==="games"?markets.games:markets.futures;
 
-  return(
-    <div style={{minHeight:"100vh",background:"#0a0f1a",color:"#f9fafb",fontFamily:"'Inter',sans-serif",paddingBottom:160}}>
-      {/* Header */}
-      <div style={{background:"#0d1520",borderBottom:"1px solid #1f2937",padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:10,boxShadow:"0 2px 20px rgba(0,0,0,0.4)"}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:20}}>{I.ball}</span>
-          <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontWeight:800,fontSize:18,letterSpacing:3,color:"#f9fafb"}}>MLN BETTING</span>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{background:"rgba(34,197,94,0.1)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:20,padding:"5px 14px",display:"flex",alignItems:"baseline",gap:3}}>
-            <span style={{fontSize:12,color:"#22c55e"}}>$</span>
-            <span style={{fontSize:15,fontWeight:700,color:"#22c55e"}}>{bal.toFixed(2)}</span>
-          </div>
-          <button style={{background:"#3b82f6",color:"#f9fafb",border:"none",borderRadius:"50%",width:32,height:32,fontWeight:800,cursor:"pointer",fontFamily:"inherit",fontSize:13}}
-            onClick={()=>{setSlip({});setScreen("login");}}>
-            {username[0]?.toUpperCase()}
-          </button>
+  return (
+    <div style={S.wrap}>
+      <div style={S.header}>
+        <div style={S.headerLeft}><span style={S.headerIcon}>{I.baseball}</span><span style={S.headerLogo}>MLN BETTING</span></div>
+        <div style={S.headerRight}>
+          <div style={S.balancePill}><span style={S.balanceDollar}>$</span><span style={S.balanceAmt}>{balance.toFixed(2)}</span></div>
+          <button style={S.avatarBtn} title={username} onClick={() => { setBetSlip({}); setScreen("login"); }}>{username[0]?.toUpperCase()}</button>
         </div>
       </div>
 
-      {/* Banner */}
-      {headerMsg&&<div style={{background:"rgba(251,191,36,0.08)",borderBottom:"1px solid rgba(251,191,36,0.15)",padding:"9px 16px",fontSize:13,color:"#fbbf24",textAlign:"center",fontWeight:500}}>{headerMsg}</div>}
+      {/* Header banner */}
+      {headerMsg && (
+        <div style={S.headerBanner}>{headerMsg}</div>
+      )}
 
-      {/* Tabs */}
-      <div style={{display:"flex",borderBottom:"1px solid #1f2937",background:"#0d1520",position:"sticky",top:57,zIndex:9,overflowX:"auto"}}>
-        {[[`${I.stadium} Games`,"games"],[`${I.crystal} Futures`,"futures"],
-          ...(lbVisible?[[`${I.medal} Standings`,"leaderboard"]]:[]),
-          [`My Bets${myBets.length?` (${myBets.length})`:""}`, "mybets"]
-        ].map(([label,key])=>(
-          <button key={key} style={{flex:"1 0 auto",background:"transparent",border:"none",
-            borderBottom:`2px solid ${tab===key?"#3b82f6":"transparent"}`,
-            color:tab===key?"#3b82f6":"#6b7280",padding:"13px 12px",fontFamily:"inherit",
-            fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap"}}
-            onClick={()=>setTab(key)}>
-            {label}
-          </button>
-        ))}
+      <div style={S.tabs}>
+        {[["games",`${I.stadium} Games`],["futures",`${I.crystal} Futures`],["leaderboard",`${I.medal} Standings`],["mybets",`My Bets${userBets.length ? ` (${userBets.length})` : ""}`]]
+          .filter(([key]) => key !== "leaderboard" || leaderboardVisible)
+          .map(([key, label]) => (
+            <button key={key} style={{ ...S.tab, ...(activeTab === key ? S.tabActive : {}) }} onClick={() => setActiveTab(key)}>{label}</button>
+          ))}
       </div>
-
-      <div style={{padding:"12px 12px 160px"}}>
-
-        {/* ── GAMES TAB ── */}
-        {tab==="games"&&(()=>{
-          const groups=groupGames(displayMkts);
-          if(!groups.length)return <div style={{textAlign:"center",padding:"60px 20px",color:"#6b7280"}}>No markets yet</div>;
-          return groups.map(({ml,sp,ou})=>{
-            const meta=leagueMeta(ml.subtitle);
-            const allM=[ml,sp,ou].filter(Boolean);
-            const anyPaused=allM.some(m=>m.status==="paused");
-            const anyActive=allM.some(m=>m.status==="open"||m.status==="paused");
-            const allSettled=allM.every(m=>m.status==="settled");
-            const totalAction=allM.reduce((s,m)=>s+m.options.reduce((ss,o)=>ss+(optTotals[o.id]||0),0),0);
-            const tA=ml.options[0]?.label||"";
-            const tB=ml.options[1]?.label||"";
-            const groupBase=getBase(ml.title);
-            const slipFromGroup=slipLegs.filter(l=>{const m=allMkts.find(x=>x.id===l.mktId);return m&&getBase(m.title)===groupBase;});
-
-            // Render one cell
-            const cell=(opt,mkt,colType)=>{
-              if(!opt)return <div key="e" style={{flex:1}}/>;
-              const sel=!!slip[opt.id];
-              const isElim=(mkt.eliminated||[]).includes(opt.id);
-              const dis=mkt.status==="settled"||mkt.status==="paused"||isElim;
-              const optAmt=optTotals[opt.id]||0;
-              const colTotal=mkt.options.reduce((s,o)=>s+(optTotals[o.id]||0),0);
-              const pct=colTotal>0?optAmt/colTotal:0;
-              const conflict=slipMode==="parlay"&&slipFromGroup.length>0&&!slipFromGroup.some(l=>l.optionId===opt.id)&&!sel;
-              const settledWin=mkt.status==="settled"&&mkt.winner===opt.id;
-              return(
-                <div key={opt.id} style={{flex:1}}>
-                  <button disabled={dis} onClick={()=>!dis&&togglePick(mkt.id,opt.id)}
-                    style={{width:"100%",background:sel?"rgba(34,197,94,0.1)":settledWin?"rgba(34,197,94,0.07)":"#111827",
-                      border:`1.5px solid ${sel?"#22c55e":settledWin?"rgba(34,197,94,0.4)":"#1f2937"}`,
-                      borderRadius:8,padding:"9px 6px",cursor:dis?"not-allowed":"pointer",
-                      textAlign:"center",transition:"all 0.12s",
-                      opacity:dis&&!settledWin?0.35:conflict?0.45:1}}>
-                    {colType!=="ml"&&<div style={{fontSize:12,fontWeight:700,color:"#e5e7eb",marginBottom:2,lineHeight:1.2}}>{opt.label}</div>}
-                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:18,fontWeight:800,color:sel?"#22c55e":"#60a5fa",letterSpacing:0.5}}>{fmt(opt.odds)}</div>
-                    {colTotal>0&&<div style={{fontSize:9,color:"#6b7280",marginTop:2}}>${optAmt.toFixed(0)} ({Math.round(pct*100)}%)</div>}
-                  </button>
-                  {colTotal>0&&<div style={{height:2,background:"#1f2937",borderRadius:1,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",width:`${pct*100}%`,background:sel?"#22c55e":"#3b82f6",opacity:0.6}}/></div>}
-                </div>
-              );
-            };
-
-            // Selected opts from this group
-            const groupSel=allM.flatMap(m=>m.options.filter(o=>!!slip[o.id]).map(o=>({o,m})));
-
-            return(
-              <div key={ml.id} style={{background:"#0d1520",border:"1px solid #1f2937",borderRadius:12,padding:"12px 14px",marginBottom:10}}>
-                {/* Card top */}
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <span style={{fontSize:9,fontWeight:700,letterSpacing:1.5,color:meta.color,textTransform:"uppercase"}}>{meta.tag}</span>
-                  <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                    {totalAction>0&&<span style={{fontSize:10,color:"#4b5563"}}>${totalAction.toFixed(0)} action</span>}
-                    {ml.maxBet&&<span style={{fontSize:10,color:"#fbbf24",background:"rgba(251,191,36,0.1)",borderRadius:4,padding:"1px 6px"}}>Max ${ml.maxBet}</span>}
-                    {anyPaused&&!allSettled&&<span style={{fontSize:10,color:"#fbbf24",background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.2)",borderRadius:4,padding:"1px 6px"}}>{I.pause} Paused</span>}
-                    {allSettled&&<span style={{fontSize:10,color:"#22c55e",background:"rgba(34,197,94,0.08)",border:"1px solid rgba(34,197,94,0.2)",borderRadius:4,padding:"1px 6px"}}>Settled</span>}
-                  </div>
-                </div>
-
-                {anyPaused&&!allSettled&&<div style={{fontSize:12,color:"#92400e",background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.12)",borderRadius:6,padding:"7px 10px",marginBottom:10}}>Betting is paused. Your existing bets are safe.</div>}
-
-                {/* Main layout: teams left, buttons right */}
-                <div style={{display:"flex",gap:10,alignItems:"stretch"}}>
-                  {/* Teams */}
-                  <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"space-around",minWidth:0}}>
-                    <div style={{display:"flex",alignItems:"center",gap:6,paddingBottom:8}}>
-                      {allSettled&&ml.winner===ml.options[0]?.id&&<div style={{width:5,height:5,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/>}
-                      <span style={{fontSize:14,fontWeight:allSettled&&ml.winner===ml.options[0]?.id?700:500,color:allSettled&&ml.winner===ml.options[0]?.id?"#f9fafb":"#9ca3af",lineHeight:1.3}}>{tA}</span>
-                    </div>
-                    <div style={{height:1,background:"#1f2937"}}/>
-                    <div style={{display:"flex",alignItems:"center",gap:6,paddingTop:8}}>
-                      {allSettled&&ml.winner===ml.options[1]?.id&&<div style={{width:5,height:5,borderRadius:"50%",background:"#22c55e",flexShrink:0}}/>}
-                      <span style={{fontSize:14,fontWeight:allSettled&&ml.winner===ml.options[1]?.id?700:500,color:allSettled&&ml.winner===ml.options[1]?.id?"#f9fafb":"#9ca3af",lineHeight:1.3}}>{tB}</span>
-                    </div>
-                  </div>
-
-                  {/* Bet columns */}
-                  <div style={{display:"flex",flexDirection:"column",gap:0,flexShrink:0}}>
-                    {/* Column headers */}
-                    <div style={{display:"flex",gap:4,marginBottom:5}}>
-                      {sp&&<div style={{flex:1,minWidth:70,fontSize:9,fontWeight:700,letterSpacing:1,color:"#6b7280",textAlign:"center",textTransform:"uppercase"}}>Spread</div>}
-                      {ou&&<div style={{flex:1,minWidth:70,fontSize:9,fontWeight:700,letterSpacing:1,color:"#6b7280",textAlign:"center",textTransform:"uppercase"}}>O/U</div>}
-                      <div style={{flex:1,minWidth:70,fontSize:9,fontWeight:700,letterSpacing:1,color:"#6b7280",textAlign:"center",textTransform:"uppercase"}}>Moneyline</div>
-                    </div>
-                    {/* Row A */}
-                    <div style={{display:"flex",gap:4,marginBottom:4}}>
-                      {sp&&cell(sp.options[0],sp,"spread")}
-                      {ou&&cell(ou.options[0],ou,"ou")}
-                      {cell(ml.options[0],ml,"ml")}
-                    </div>
-                    {/* Row B */}
-                    <div style={{display:"flex",gap:4}}>
-                      {sp&&cell(sp.options[1],sp,"spread")}
-                      {ou&&cell(ou.options[1],ou,"ou")}
-                      {cell(ml.options[1],ml,"ml")}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Winner */}
-                {allSettled&&<div style={{fontSize:13,color:"#22c55e",fontWeight:700,marginTop:8,paddingTop:8,borderTop:"1px solid #1f2937"}}>{I.trophy} {ml.options.find(o=>o.id===ml.winner)?.label} wins</div>}
-
-                {/* Stake inputs */}
-                {slipMode==="straight"&&groupSel.map(({o,m})=>{
-                  const s=slip[o.id];const stake=parseFloat(s?.stake)||0;const win=stake>0?toWin(stake,o.odds):0;
-                  const colLbl=m.id===ml.id?"ML":m.id===sp?.id?"Spread":"O/U";
-                  return(
-                    <div key={o.id} style={{background:"rgba(34,197,94,0.05)",border:"1.5px solid rgba(34,197,94,0.3)",borderRadius:8,padding:"10px 12px",marginTop:8,display:"flex",alignItems:"center",gap:10}}>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:10,color:"#6b7280",marginBottom:2}}>{colLbl}</div>
-                        <div style={{fontSize:13,fontWeight:600}}>{o.label} <span style={{color:"#22c55e"}}>{fmt(o.odds)}</span></div>
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:6}}>
-                        <div style={{display:"flex",alignItems:"center",background:"#111827",borderRadius:6,padding:"4px 10px"}}>
-                          <span style={{color:"#22c55e",fontWeight:700,marginRight:2}}>$</span>
-                          <input style={{background:"transparent",border:"none",color:"#f9fafb",fontFamily:"inherit",fontSize:15,width:80,outline:"none",fontWeight:700}}
-                            type="number" placeholder="0" value={s?.stake||""} onChange={e=>setStake(o.id,e.target.value)} min="1"/>
-                        </div>
-                        {win>0&&<span style={{fontSize:12,color:"#22c55e",whiteSpace:"nowrap"}}>win ${win.toFixed(2)}</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Conflict warning */}
-                {slipMode==="parlay"&&sameGameConflict&&slipFromGroup.length>1&&(
-                  <div style={{fontSize:11,color:"#f59e0b",padding:"6px 10px",background:"rgba(245,158,11,0.08)",borderRadius:6,marginTop:8}}>
-                    Cannot parlay moneyline + spread from the same game
-                  </div>
-                )}
-              </div>
+      {(activeTab === "games" || activeTab === "futures") && (
+        <div style={{ display: "flex", borderBottom: "1px solid #1e2d3d", background: "#07111a", padding: "0 12px" }}>
+          {[["open","Open"],["resolved","Resolved"]].map(([key, label]) => {
+            const count = key === "open"
+              ? (activeTab === "games" ? markets.games : markets.futures).filter(m => m.status === "open" || m.status === "paused").length
+              : (activeTab === "games" ? markets.games : markets.futures).filter(m => m.status === "settled").length;
+            return (
+              <button key={key}
+                style={{ background: "transparent", border: "none", borderBottom: gamesFilter === key ? "2px solid #60a5fa" : "2px solid transparent",
+                  color: gamesFilter === key ? "#f8fafc" : "#4a6280", padding: "8px 14px", fontFamily: "inherit",
+                  fontSize: 11, fontWeight: 600, cursor: "pointer", letterSpacing: 0.3 }}
+                onClick={() => setGamesFilter(key)}>
+                {label}{count > 0 ? ` (${count})` : ""}
+              </button>
             );
-          });
-        })()}
+          })}
+        </div>
+      )}
 
-        {/* ── FUTURES TAB ── */}
-        {tab==="futures"&&(()=>{
-          if(!displayMkts.length)return <div style={{textAlign:"center",padding:"60px 20px",color:"#6b7280"}}>No futures yet</div>;
-          return displayMkts.map(m=>{
-            const meta=leagueMeta(m.subtitle);
-            const mTotal=m.options.reduce((s,o)=>s+(optTotals[o.id]||0),0);
-            return(
-              <div key={m.id} style={{background:"#0d1520",border:"1px solid #1f2937",borderRadius:12,padding:"14px 16px",marginBottom:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <span style={{fontSize:9,fontWeight:700,letterSpacing:1.5,color:meta.color,textTransform:"uppercase"}}>{meta.tag}</span>
-                  <div style={{display:"flex",gap:6}}>{statusBadge(m.status)}</div>
-                </div>
-                <div style={{fontSize:16,fontWeight:700,marginBottom:3,color:"#f9fafb"}}>{m.title}</div>
-                <div style={{fontSize:11,color:"#6b7280",marginBottom:12}}>{m.subtitle}</div>
-                {m.status==="paused"&&<div style={{fontSize:12,color:"#92400e",background:"rgba(245,158,11,0.06)",border:"1px solid rgba(245,158,11,0.12)",borderRadius:6,padding:"7px 10px",marginBottom:10}}>Betting is paused. Your existing bets are safe.</div>}
-                {m.status==="settled"&&<div style={{fontSize:14,color:"#22c55e",fontWeight:700,marginBottom:12,background:"rgba(34,197,94,0.06)",border:"1px solid rgba(34,197,94,0.15)",borderRadius:8,padding:"8px 12px"}}>{I.trophy} {m.options.find(o=>o.id===m.winner)?.label}</div>}
-                <div style={{display:"flex",flexDirection:"column",gap:7}}>
-                  {m.options.map(opt=>{
-                    const sel=!!slip[opt.id];const isElim=(m.eliminated||[]).includes(opt.id);
-                    const dis=m.status==="settled"||m.status==="paused"||isElim;
-                    const optAmt=optTotals[opt.id]||0;const pct=mTotal>0?optAmt/mTotal:0;
-                    return(
-                      <div key={opt.id}>
-                        <button disabled={dis} onClick={()=>!dis&&togglePick(m.id,opt.id)}
-                          style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                            background:sel?"rgba(34,197,94,0.08)":"#111827",border:`1.5px solid ${sel?"#22c55e":"#1f2937"}`,
-                            borderRadius:9,padding:"11px 14px",cursor:dis?"not-allowed":"pointer",
-                            width:"100%",opacity:dis?0.35:1,transition:"all 0.12s"}}>
-                          <span style={{fontSize:13,fontWeight:500,color:"#e5e7eb",textAlign:"left"}}>
-                            {opt.label}
-                            {isElim&&<span style={{fontSize:11,color:"#ef4444",marginLeft:8,fontWeight:600}}>OUT</span>}
-                          </span>
-                          <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
-                            <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:16,fontWeight:800,color:sel?"#22c55e":"#60a5fa"}}>{fmt(opt.odds)}</span>
-                            {mTotal>0&&<span style={{fontSize:9,color:"#6b7280"}}>${optAmt.toFixed(0)} - {Math.round(pct*100)}%</span>}
-                          </div>
-                        </button>
-                        {mTotal>0&&<div style={{height:2,background:"#1f2937",borderRadius:1,marginTop:3,overflow:"hidden"}}><div style={{height:"100%",width:`${pct*100}%`,background:sel?"#22c55e":meta.color,opacity:0.6}}/></div>}
-                        {slipMode==="straight"&&slip[opt.id]&&(()=>{
-                          const s=slip[opt.id];const stake=parseFloat(s.stake)||0;const win=stake>0?toWin(stake,opt.odds):0;
-                          return(
-                            <div style={{background:"rgba(34,197,94,0.05)",border:"1.5px solid rgba(34,197,94,0.3)",borderRadius:8,padding:"10px 12px",marginTop:6,display:"flex",alignItems:"center",gap:10}}>
-                              <span style={{fontSize:12,color:"#22c55e",flex:1,fontWeight:600}}>{opt.label}</span>
-                              <div style={{display:"flex",alignItems:"center",background:"#111827",borderRadius:6,padding:"4px 10px"}}>
-                                <span style={{color:"#22c55e",fontWeight:700,marginRight:2}}>$</span>
-                                <input style={{background:"transparent",border:"none",color:"#f9fafb",fontFamily:"inherit",fontSize:15,width:80,outline:"none",fontWeight:700}}
-                                  type="number" placeholder="0" value={s.stake} onChange={e=>setStake(opt.id,e.target.value)} min="1"/>
-                              </div>
-                              {win>0&&<span style={{fontSize:12,color:"#22c55e",whiteSpace:"nowrap"}}>win ${win.toFixed(2)}</span>}
+      <div style={S.content}>
+        {(activeTab === "games" || activeTab === "futures") && (
+          <>
+            {displayMarkets.length === 0 && <div style={S.empty}><p style={S.emptyText}>No markets yet.</p></div>}
+            {activeTab === "futures" && displayMarkets.map(market => {
+              const meta = leagueMeta(market.subtitle);
+              const marketBetTotal = market.options.reduce((sum, o) => sum + (optionTotals[o.id] || 0), 0);
+              return (
+                <div key={market.id} style={S.marketCard}>
+                  <div style={S.marketTop}>
+                    <span style={{ ...S.leagueTag, color: meta.color, background: meta.bg }}>{meta.tag}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {market.maxBet && <span style={S.maxBetTag}>Max ${market.maxBet}</span>}
+                      {marketBetTotal > 0 && <span style={S.actionTag}>${marketBetTotal.toFixed(0)} action</span>}
+                      {market.status === "paused" && <span style={S.pausedTag}>{I.pause} PAUSED</span>}
+                      {market.status === "settled" && <span style={S.settledTag}>SETTLED</span>}
+                    </div>
+                  </div>
+                  <h3 style={S.marketTitle}>{market.title}</h3>
+                  <p style={S.marketSub}>{market.subtitle}</p>
+                  {market.status === "paused" && <div style={S.pausedNotice}>Betting is paused - your existing bets are safe. Check back soon.</div>}
+                  {market.status === "settled" && <div style={S.winnerAnnounce}>{I.trophy} {market.options.find(o => o.id === market.winner)?.label}</div>}
+                  <div style={S.optionGrid}>
+                    {market.options.map(opt => {
+                      const selected = !!betSlip[opt.id];
+                      const isElim = (market.eliminated || []).includes(opt.id);
+                      const disabled = market.status === "settled" || market.status === "paused" || isElim;
+                      const optTotal = optionTotals[opt.id] || 0;
+                      const pct = marketBetTotal > 0 ? optTotal / marketBetTotal : 0;
+                      return (
+                        <div key={opt.id}>
+                          <button disabled={disabled} style={{ ...S.optionBtn, ...(selected ? S.optionBtnSelected : {}), ...(disabled ? S.optionBtnDisabled : {}), ...(isElim ? { background: "#fff1f2", borderColor: "#fecaca" } : {}) }} onClick={() => !disabled && togglePick(market.id, opt.id)}>
+                            <span style={S.optionLabel}>{opt.label}{isElim && <span style={{ fontSize: 11.0, color: "#ef4444", marginLeft: 8, fontWeight: 600 }}>OUT</span>}</span>
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 }}>
+                              <span style={{ ...S.optionOdds, ...(selected ? S.optionOddsSelected : {}), ...(isElim ? { color: "#ef4444", textDecoration: "line-through" } : {}) }}>{fmt(opt.odds)}</span>
+                              {marketBetTotal > 0 && <span style={S.optionMoney}>${optTotal.toFixed(0)} - {Math.round(pct * 100)}%</span>}
                             </div>
-                          );
-                        })()}
+                          </button>
+                          {marketBetTotal > 0 && <div style={S.moneyBar}><div style={{ ...S.moneyBarFill, width: `${pct * 100}%`, background: selected ? "#4ade80" : meta.color }} /></div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {slipMode === "straight" && market.options.map(opt => {
+                    if (!betSlip[opt.id]) return null;
+                    const slip = betSlip[opt.id]; const stake = parseFloat(slip.stake) || 0; const win = stake > 0 ? toWin(stake, opt.odds) : 0;
+                    return (
+                      <div key={opt.id} style={S.stakeRow}>
+                        <span style={S.stakeTeam}>{opt.label}</span>
+                        <div style={S.stakeInputWrap}><span style={S.stakeDollar}>$</span><input style={S.stakeInput} type="number" placeholder="0" value={slip.stake} onChange={e => setStake(opt.id, e.target.value)} min="1" /></div>
+                        {win > 0 && <span style={S.toWin}>to win ${win.toFixed(2)}</span>}
                       </div>
                     );
                   })}
                 </div>
-              </div>
-            );
-          });
-        })()}
+              );
+            })}
 
-        {/* ── STANDINGS TAB ── */}
-        {tab==="leaderboard"&&(
-          <>
-            <div style={{background:"#0d1520",border:"1px solid #1f2937",borderRadius:12,padding:"14px 16px",marginBottom:10}}>
-              <div style={{fontSize:16,fontWeight:700,marginBottom:4}}>Standings</div>
-              <div style={{fontSize:11,color:"#6b7280",marginBottom:14}}>Starting balance ${START_BAL.toLocaleString()}</div>
-              {lbActive.length===0&&<div style={{color:"#6b7280",fontSize:13}}>No bets placed yet</div>}
-              {lbActive.map(({name,u,pending,total,rank},i)=>{
-                const diff=total-START_BAL;
-                const isTied=lbActive.filter(p=>p.rank===rank).length>1;
-                return(
-                  <div key={name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:i<lbActive.length-1?"1px solid #1f2937":"none"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <span style={{fontSize:16,fontWeight:700,color:"#f9fafb",width:34}}>{isTied?`T${rank}`:`#${rank}`}</span>
-                      <span style={{fontSize:14,fontWeight:600,color:name===username?"#60a5fa":"#f9fafb"}}>{name}{name===username?" - you":""}</span>
+            {activeTab === "games" && (()=>{
+              const grouped = [];
+              const used = new Set();
+              for (const m of displayMarkets) {
+                if (used.has(m.id)) continue;
+                const baseTitle = m.title.replace(/ - Spread$/, '').replace(/ - O\/U [\d.]+$/, '');
+                const isBase = m.title === baseTitle;
+                if (!isBase) continue;
+                const spread = displayMarkets.find(x => x.title === `${baseTitle} - Spread`);
+                const ou = displayMarkets.find(x => x.title.startsWith(`${baseTitle} - O/U`));
+                [m.id, spread?.id, ou?.id].filter(Boolean).forEach(id => used.add(id));
+                grouped.push({ moneyline: m, spread: spread || null, ou: ou || null });
+              }
+              for (const m of displayMarkets) {
+                if (!used.has(m.id)) { grouped.push({ moneyline: m, spread: null, ou: null }); used.add(m.id); }
+              }
+
+              return grouped.map(({ moneyline: ml, spread: sp, ou }) => {
+                const meta = leagueMeta(ml.subtitle);
+                const allMkts = [ml, sp, ou].filter(Boolean);
+                const anyPaused = allMkts.some(m => m.status === "paused");
+                const allSettled = allMkts.every(m => m.status === "settled");
+                const totalAction = allMkts.reduce((s,m) => s + m.options.reduce((ss,o) => ss+(optionTotals[o.id]||0),0), 0);
+                const teamA = ml.options[0]?.label || "";
+                const teamB = ml.options[1]?.label || "";
+                const hasSpread = !!sp, hasOU = !!ou;
+
+                // Which options from this group are selected
+                const groupSelected = allMkts.flatMap(m => m.options.filter(o => !!betSlip[o.id]).map(o => ({ o, m })));
+
+                // Conflict: has user picked from this group's markets in a way that would conflict?
+                const groupBaseTitle = getBaseTitle(ml.title);
+                const slipFromThisGroup = slipLegs.filter(l => {
+                  const mkt = allMarkets.find(x => x.id === l.marketId);
+                  return mkt && getBaseTitle(mkt.title) === groupBaseTitle;
+                });
+
+                // Render a bet button cell
+                // Inline cell renderer (not a component — avoids React remount issues)
+                const renderCell = (opt, market, colType) => {
+                  if (!opt) return <div key="empty" style={GS.betCellEmpty}/>;
+                  const selected = !!betSlip[opt.id];
+                  const isElim = (market.eliminated||[]).includes(opt.id);
+                  const disabled = market.status === "settled" || market.status === "paused" || isElim;
+                  const optTotal = optionTotals[opt.id] || 0;
+                  const colTotal = market.options.reduce((s,o)=>s+(optionTotals[o.id]||0),0);
+                  const pct = colTotal > 0 ? optTotal/colTotal : 0;
+                  const wouldConflict = slipMode === "parlay" && slipFromThisGroup.length > 0 &&
+                    !slipFromThisGroup.some(l => l.optionId === opt.id);
+                  const isSettledWin = market.status === "settled" && market.winner === opt.id;
+                  return (
+                    <div key={opt.id} style={{ flex: 1 }}>
+                      <button
+                        disabled={disabled}
+                        onClick={() => !disabled && togglePick(market.id, opt.id)}
+                        style={{
+                          ...GS.betCell,
+                          ...(selected ? GS.betCellSelected : {}),
+                          ...(isSettledWin ? GS.betCellWin : {}),
+                          ...(disabled ? GS.betCellDisabled : {}),
+                          ...(wouldConflict && !selected ? GS.betCellConflict : {}),
+                        }}
+                      >
+                        {colType !== "ml" && <div style={GS.betCellLine}>{opt.label}</div>}
+                        <div style={{ ...GS.betCellOdds, ...(selected ? { color: "#22c55e" } : {}) }}>{fmt(opt.odds)}</div>
+                        {colTotal > 0 && <div style={GS.betCellAction}>${optTotal.toFixed(0)} ({Math.round(pct*100)}%)</div>}
+                      </button>
                     </div>
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:2}}>
-                      <span style={{fontSize:16,fontWeight:700,color:"#22c55e"}}>${total.toFixed(2)}</span>
-                      <div style={{display:"flex",gap:8}}>
-                        <span style={{fontSize:10,color:"#4ade80"}}>${u.balance.toFixed(0)} cash</span>
-                        {pending>0&&<span style={{fontSize:10,color:"#fbbf24"}}>${pending.toFixed(0)} in Open Bets</span>}
+                  );
+                };
+
+                return (
+                  <div key={ml.id} style={GS.gameCard}>
+                    {/* Top bar: league tag + status */}
+                    <div style={GS.gameCardTop}>
+                      <span style={{ ...GS.leagueTag, color: meta.color }}>{meta.tag}</span>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                        {totalAction > 0 && <span style={GS.actionTag}>${totalAction.toFixed(0)} action</span>}
+                        {ml.maxBet && <span style={GS.maxTag}>Max ${ml.maxBet}</span>}
+                        {anyPaused && !allSettled && <span style={GS.pauseTag}>{I.pause} Paused</span>}
+                        {allSettled && <span style={GS.settledTag}>Settled</span>}
                       </div>
-                      <span style={{fontSize:11,color:diff>=0?"#4ade80":"#f87171"}}>{diff>=0?"Up":"Down"} ${Math.abs(diff).toFixed(2)}</span>
+                    </div>
+
+                    {anyPaused && <div style={GS.pauseBar}>Betting is paused on this game. Your existing bets are safe.</div>}
+
+                    {/* Main grid: teams on left, bet buttons on right */}
+                    <div style={GS.gameGrid}>
+                      {/* Team names column */}
+                      <div style={GS.teamsCol}>
+                        <div style={GS.teamRow}>
+                          {ml.status === "settled" && ml.winner === ml.options[0]?.id && <span style={GS.winDot}/>}
+                          <span style={{ ...GS.teamName, ...(ml.status === "settled" && ml.winner === ml.options[0]?.id ? { color: "#f8fafc", fontWeight: 700 } : {}) }}>{teamA}</span>
+                        </div>
+                        <div style={GS.teamDivider}/>
+                        <div style={GS.teamRow}>
+                          {ml.status === "settled" && ml.winner === ml.options[1]?.id && <span style={GS.winDot}/>}
+                          <span style={{ ...GS.teamName, ...(ml.status === "settled" && ml.winner === ml.options[1]?.id ? { color: "#f8fafc", fontWeight: 700 } : {}) }}>{teamB}</span>
+                        </div>
+                      </div>
+
+                      {/* Bet columns */}
+                      <div style={GS.betCols}>
+                        {/* Column headers */}
+                        <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                          <div style={GS.colHeader}>MONEYLINE</div>
+                          {hasSpread && <div style={GS.colHeader}>SPREAD</div>}
+                          {hasOU && <div style={GS.colHeader}>O/U</div>}
+                        </div>
+                        {/* Row A */}
+                        <div style={{ display: "flex", gap: 4, marginBottom: 4 }}>
+                          {renderCell(ml.options[0], ml, "ml")}
+                          {hasSpread && renderCell(sp.options[0], sp, "spread")}
+                          {hasOU && renderCell(ou.options[0], ou, "ou")}
+                        </div>
+                        {/* Row B */}
+                        <div style={{ display: "flex", gap: 4 }}>
+                          {renderCell(ml.options[1], ml, "ml")}
+                          {hasSpread && renderCell(sp.options[1], sp, "spread")}
+                          {hasOU && renderCell(ou.options[1], ou, "ou")}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Winner announcement */}
+                    {allSettled && <div style={GS.winnerBar}>{I.trophy} {ml.options.find(o=>o.id===ml.winner)?.label} wins</div>}
+
+                    {/* Stake inputs for selected picks */}
+                    {slipMode === "straight" && groupSelected.map(({ o, m }) => {
+                      const slip = betSlip[o.id]; const stake = parseFloat(slip?.stake)||0; const win = stake > 0 ? toWin(stake, o.odds) : 0;
+                      const colLabel = m.id === ml.id ? "ML" : m.id === sp?.id ? "Spread" : "O/U";
+                      return (
+                        <div key={o.id} style={GS.stakeRow}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 2 }}>{colLabel} - {teamA} vs {teamB}</div>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: "#f8fafc" }}>{o.label} <span style={{ color: "#22c55e" }}>{fmt(o.odds)}</span></div>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={GS.stakeWrap}>
+                              <span style={GS.stakeSym}>$</span>
+                              <input style={GS.stakeInput} type="number" placeholder="0" value={slip?.stake||""} onChange={e=>setStake(o.id, e.target.value)} min="1"/>
+                            </div>
+                            {win > 0 && <span style={{ fontSize: 12, color: "#22c55e", whiteSpace: "nowrap" }}>win ${win.toFixed(2)}</span>}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Same-game conflict warning */}
+                    {slipMode === "parlay" && hasSameGameConflict && slipFromThisGroup.length > 1 && (
+                      <div style={{ fontSize: 11, color: "#f59e0b", padding: "6px 12px", background: "rgba(245,158,11,0.1)", borderRadius: 6, marginTop: 8 }}>
+                        Cannot parlay moneyline + spread from the same game
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
+
+            {slipEntries.length > 0 && (
+              <div style={S.slipFooter}>
+                {parlayEligible && (
+                  <div style={S.slipModeRow}>
+                    <button style={{ ...S.slipModeBtn, ...(slipMode === "straight" ? S.slipModeBtnActive : {}) }} onClick={() => setSlipMode("straight")}>Straight</button>
+                    <button style={{ ...S.slipModeBtn, ...(slipMode === "parlay" ? S.slipModeBtnActive : {}) }} onClick={() => setSlipMode("parlay")}>Parlay {parlayOdds != null ? fmt(parlayOdds) : ""}</button>
+                  </div>
+                )}
+                {slipMode === "parlay" && parlayEligible && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 11.0, color: "#94a3b8", letterSpacing: 1, marginBottom: 6 }}>{slipEntries.length}-LEG PARLAY - {fmt(parlayOdds)}</div>
+                    {slipLegs.map((l, i) => <div key={i} style={{ fontSize: 12.0, color: "#64748b", marginBottom: 3 }}><span style={{ color: "#6366f1", marginRight: 6 }}>{fmt(l.odds)}</span>{l.optionLabel}</div>)}
+                    <div style={{ ...S.stakeRow, marginTop: 10 }}>
+                      <span style={S.stakeTeam}>PARLAY STAKE</span>
+                      <div style={S.stakeInputWrap}><span style={S.stakeDollar}>$</span><input style={S.stakeInput} type="number" placeholder="0" value={parlayStake} onChange={e => setParlayStake(e.target.value)} min="1" /></div>
+                      {parlayPayout > 0 && <span style={S.toWin}>to win ${parlayPayout.toFixed(2)}</span>}
+                    </div>
+                  </div>
+                )}
+                {slipMode === "straight" && (
+                  <div style={S.slipSummary}>
+                    <div style={S.slipSummaryRow}><span style={S.slipSummaryLabel}>Total stake</span><span style={S.slipSummaryVal}>${straightTotal.toFixed(2)}</span></div>
+                    <div style={S.slipSummaryRow}><span style={S.slipSummaryLabel}>Total potential payout</span><span style={{ ...S.slipSummaryVal, color: "#16a34a" }}>${straightPayout.toFixed(2)}</span></div>
+                  </div>
+                )}
+                <button style={S.placeBetBtn} onClick={placeBets}>{slipMode === "parlay" ? "Place Parlay" : `Place ${slipEntries.length} Bet${slipEntries.length > 1 ? "s" : ""}`}</button>
+              </div>
+            )}
+          </>
+        )}
+
+        {activeTab === "leaderboard" && (
+          <>
+            <div style={S.marketCard}>
+              <h3 style={S.marketTitle}>Standings</h3>
+              <p style={S.marketSub}>Starting balance ${STARTING_BALANCE.toLocaleString()}</p>
+              {activePlayers.length === 0 && <p style={S.emptyText}>No bets placed yet.</p>}
+              {activePlayers.map(({ name, u, pendingAmt, total, _rank }, i) => {
+                const diff = total - STARTING_BALANCE;
+                const isLast = i === activePlayers.length - 1;
+                const prevTied = i > 0 && activePlayers[i-1]._rank === _rank;
+                const nextTied = !isLast && activePlayers[i+1]._rank === _rank;
+                const isTied = prevTied || nextTied;
+                return (
+                  <div key={name} style={{ ...S.boardRow, borderBottom: !isLast ? "1px solid #1a1a24" : "none" }}>
+                    <div style={S.boardLeft}>
+                      <span style={{ ...S.boardRank, fontSize: 16.0, color: "#1e293b", width: 32, fontWeight: 700 }}>
+                        {isTied ? `T${_rank}` : `#${_rank}`}
+                      </span>
+                      <span style={{ ...S.boardName, color: name === username ? "#6366f1" : "#d0d0d0" }}>{name}{name === username ? " - you" : ""}</span>
+                    </div>
+                    <div style={S.boardRight}>
+                      <span style={S.boardBal}>${total.toFixed(2)}</span>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <span style={{ fontSize: 11.0, color: "#16a34a" }}>${u.balance.toFixed(0)} cash</span>
+                        {pendingAmt > 0 && <span style={{ fontSize: 11.0, color: "#d97706" }}>${pendingAmt.toFixed(0)} in Open Bets</span>}
+                      </div>
+                      <span style={{ fontSize: 12.0, color: diff >= 0 ? "#16a34a" : "#ef4444" }}>{diff >= 0 ? "^" : "v"} ${Math.abs(diff).toFixed(2)}</span>
                     </div>
                   </div>
                 );
               })}
             </div>
-            {lbInactive.length>0&&(
-              <div style={{background:"#0d1520",border:"1px solid #1f2937",borderRadius:12,padding:"14px 16px",opacity:0.6}}>
-                <div style={{fontSize:9,fontWeight:700,letterSpacing:2,color:"#6b7280",textTransform:"uppercase",marginBottom:10}}>PLAYERS WHO HAVE NOT MADE BETS</div>
-                {lbInactive.map(({name,u},i)=>(
-                  <div key={name} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:i<lbInactive.length-1?"1px solid #1f2937":"none"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <span style={{fontSize:14,color:"#6b7280",width:34}}>-</span>
-                      <span style={{fontSize:14,color:name===username?"#60a5fa":"#6b7280"}}>{name}</span>
+
+            {inactivePlayers.length > 0 && (
+              <div style={{ ...S.marketCard, opacity: 0.6 }}>
+                <p style={{ fontSize: 10.0, letterSpacing: 2, color: "#64748b", fontWeight: 700, margin: "0 0 12px" }}>PLAYERS WHO HAVE NOT MADE BETS</p>
+                {inactivePlayers.map(({ name, u }, i) => (
+                  <div key={name} style={{ ...S.boardRow, borderBottom: i < inactivePlayers.length - 1 ? "1px solid #1a1a24" : "none" }}>
+                    <div style={S.boardLeft}>
+                      <span style={{ ...S.boardRank, fontSize: 16.0, color: "#64748b", width: 32 }}>-</span>
+                      <span style={{ ...S.boardName, color: name === username ? "#6366f1" : "#555" }}>{name}{name === username ? " - you" : ""}</span>
                     </div>
-                    <span style={{fontSize:14,fontWeight:700,color:"#6b7280"}}>${u.balance.toFixed(2)}</span>
+                    <div style={S.boardRight}>
+                      <span style={{ ...S.boardBal, color: "#64748b" }}>${u.balance.toFixed(2)}</span>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1325,94 +1570,209 @@ export default function App() {
           </>
         )}
 
-        {/* ── MY BETS TAB ── */}
-        {tab==="mybets"&&(
+        {activeTab === "mybets" && (
           <>
-            {myBets.length===0&&<div style={{textAlign:"center",padding:"60px 20px",color:"#6b7280"}}>No bets yet</div>}
-            {[...myBets].reverse().map(b=>(
-              <div key={b.id} style={{background:b.status==="won"?"rgba(34,197,94,0.05)":b.status==="lost"?"rgba(239,68,68,0.03)":"#0d1520",border:`1px solid ${b.status==="won"?"rgba(34,197,94,0.2)":b.status==="lost"?"rgba(239,68,68,0.15)":"#1f2937"}`,borderRadius:12,padding:14,marginBottom:10}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}>
-                  <span style={{fontSize:11,color:"#6b7280"}}>{b.betType==="parlay"?<span style={{color:"#60a5fa",fontWeight:600}}>PARLAY - {fmt(b.combinedOdds)}</span>:b.marketTitle}</span>
-                  <span style={{fontSize:11,fontWeight:700,color:b.status==="won"?"#22c55e":b.status==="lost"?"#ef4444":b.status==="voided"?"#9ca3af":"#fbbf24"}}>
-                    {b.status==="won"?`${I.check} WON`:b.status==="lost"?`${I.cross} LOST`:b.status==="voided"?`${I.undo} VOID`:`${I.pending} PENDING`}
-                  </span>
+            {userBets.length === 0 && <div style={S.empty}><p style={S.emptyText}>No bets yet.</p></div>}
+            {[...userBets].reverse().map(b => (
+              <div key={b.id} style={{ ...S.betCard, ...(b.status === "won" ? S.betCardWon : b.status === "lost" ? S.betCardLost : b.status === "voided" ? { opacity: 0.5 } : {}) }}>
+                <div style={S.betCardTop}>
+                  <span style={S.betMarket}>{b.betType === "parlay" ? <span style={{ color: "#3b82f6" }}>PARLAY - {fmt(b.combinedOdds)}</span> : b.marketTitle}</span>
+                  <span style={{ fontSize: 12.0, fontWeight: 700, color: b.status === "won" ? "#16a34a" : b.status === "lost" ? "#ef4444" : b.status === "voided" ? "#94a3b8" : "#d97706" }}>{b.status === "won" ? `${I.check} WON` : b.status === "lost" ? `${I.cross} LOST` : b.status === "voided" ? `${I.undo} VOID` : `${I.pending} PENDING`}</span>
                 </div>
-                {b.betType==="parlay"?b.legs.map((l,i)=>(
-                  <div key={i} style={{fontSize:12,color:"#9ca3af",marginBottom:3,paddingLeft:4}}>
-                    <span style={{color:"#fbbf24",marginRight:6}}>{fmt(l.odds)}</span>{l.optionLabel}
-                    <span style={{marginLeft:6,fontSize:10,color:l.status==="won"?"#22c55e":l.status==="lost"?"#ef4444":"#6b7280"}}>{l.status==="won"?I.check:l.status==="lost"?I.cross:""}</span>
-                  </div>
-                )):<div style={{fontSize:15,fontWeight:700,marginBottom:7}}>{b.optionLabel} <span style={{color:"#fbbf24"}}>{fmt(b.odds)}</span></div>}
-                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"#6b7280",marginTop:8}}>
-                  <span>Stake <strong>${b.stake.toFixed(2)}</strong></span>
-                  <span>Payout <strong>${b.payout.toFixed(2)}</strong></span>
-                </div>
-                {b.placedAt&&<div style={{fontSize:10,color:"#374151",marginTop:5}}>{fmtDate(b.placedAt)}</div>}
+                {b.betType === "parlay" ? b.legs.map((l, i) => <div key={i} style={{ fontSize: 13.0, color: "#64748b", marginBottom: 3, paddingLeft: 4 }}><span style={{ color: "#6366f1", marginRight: 6 }}>{fmt(l.odds)}</span>{l.optionLabel}<span style={{ marginLeft: 6, fontSize: 11.0, color: l.status === "won" ? "#16a34a" : l.status === "lost" ? "#ef4444" : "#94a3b8" }}>{l.status === "won" ? I.check : l.status === "lost" ? I.cross : ""}</span></div>) : <div style={S.betPick}>{b.optionLabel} <span style={{ color: "#6366f1" }}>{fmt(b.odds)}</span></div>}
+                <div style={S.betAmounts}><span>Stake <strong>${b.stake.toFixed(2)}</strong></span><span>Payout <strong>${b.payout.toFixed(2)}</strong></span></div>
+                <div style={{ fontSize: 11.0, color: "#64748b", marginTop: 6 }}>{fmtTime(b.placedAt)}</div>
               </div>
             ))}
           </>
         )}
       </div>
-
-      {/* ── BET SLIP FOOTER ── */}
-      {slipEntries.length>0&&(
-        <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0d1520",borderTop:"1px solid #1f2937",padding:"12px 14px",zIndex:20,boxShadow:"0 -8px 40px rgba(0,0,0,0.6)"}}>
-          {parlayOk&&(
-            <div style={{display:"flex",gap:6,marginBottom:10}}>
-              <button style={{flex:1,background:slipMode==="straight"?"rgba(34,197,94,0.1)":"#111827",border:`1.5px solid ${slipMode==="straight"?"#22c55e":"#1f2937"}`,color:slipMode==="straight"?"#22c55e":"#6b7280",borderRadius:8,padding:"8px 12px",fontFamily:"inherit",fontSize:12,cursor:"pointer",fontWeight:600}}
-                onClick={()=>setSlipMode("straight")}>Straight</button>
-              <button style={{flex:1,background:slipMode==="parlay"?"rgba(34,197,94,0.1)":"#111827",border:`1.5px solid ${slipMode==="parlay"?"#22c55e":"#1f2937"}`,color:slipMode==="parlay"?"#22c55e":"#6b7280",borderRadius:8,padding:"8px 12px",fontFamily:"inherit",fontSize:12,cursor:"pointer",fontWeight:600}}
-                onClick={()=>setSlipMode("parlay")}>Parlay {parlayOdds!=null?fmt(parlayOdds):""}</button>
-            </div>
-          )}
-          {slipMode==="parlay"&&parlayOk&&(
-            <div style={{marginBottom:10}}>
-              <div style={{fontSize:10,color:"#9ca3af",letterSpacing:1,marginBottom:6}}>{slipEntries.length}-LEG PARLAY - {fmt(parlayOdds)}</div>
-              {slipLegs.map((l,i)=><div key={i} style={{fontSize:11,color:"#9ca3af",marginBottom:3}}><span style={{color:"#fbbf24",marginRight:6}}>{fmt(l.odds)}</span>{l.optLabel}</div>)}
-              <div style={{background:"rgba(34,197,94,0.05)",border:"1.5px solid rgba(34,197,94,0.3)",borderRadius:8,padding:"10px 12px",marginTop:8,display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:11,color:"#22c55e",fontWeight:600}}>PARLAY STAKE</span>
-                <div style={{display:"flex",alignItems:"center",background:"#111827",borderRadius:6,padding:"4px 10px"}}>
-                  <span style={{color:"#22c55e",fontWeight:700,marginRight:2}}>$</span>
-                  <input style={{background:"transparent",border:"none",color:"#f9fafb",fontFamily:"inherit",fontSize:15,width:80,outline:"none",fontWeight:700}}
-                    type="number" placeholder="0" value={parlayStake} onChange={e=>setParlayStake(e.target.value)} min="1"/>
-                </div>
-                {parlayPay>0&&<span style={{fontSize:12,color:"#22c55e",whiteSpace:"nowrap"}}>win ${parlayPay.toFixed(2)}</span>}
-              </div>
-            </div>
-          )}
-          {slipMode==="straight"&&(
-            <div style={{background:"#111827",border:"1px solid #1f2937",borderRadius:9,padding:"9px 12px",marginBottom:10}}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}><span style={{fontSize:11,color:"#6b7280"}}>Total stake</span><span style={{fontSize:13,fontWeight:700}}>${straightTotal.toFixed(2)}</span></div>
-              <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:11,color:"#6b7280"}}>Potential payout</span><span style={{fontSize:13,fontWeight:700,color:"#22c55e"}}>${straightPay.toFixed(2)}</span></div>
-            </div>
-          )}
-          <button style={{width:"100%",background:"#3b82f6",color:"#f9fafb",border:"none",borderRadius:10,padding:"14px",fontFamily:"inherit",fontWeight:800,fontSize:14,cursor:"pointer"}}
-            onClick={placeBets}>
-            {slipMode==="parlay"?"Place Parlay":"Place "+slipEntries.length+" Bet"+(slipEntries.length>1?"s":"")}
-          </button>
-        </div>
-      )}
-      {notif&&<Toast n={notif}/>}
+      {notification && <Toast n={notification} />}
     </div>
   );
 }
 
-//  Shared styles 
-const S = {
-  inp: { background:"#1f2937",border:"1px solid #374151",borderRadius:8,padding:"11px 14px",color:"#f9fafb",fontFamily:"'Inter',sans-serif",fontSize:13,outline:"none",width:"100%",boxSizing:"border-box" },
-  lbl: { display:"block",fontSize:10,fontWeight:700,color:"#6b7280",letterSpacing:1,marginBottom:6,textTransform:"uppercase" },
-  btnPrimary: { background:"#3b82f6",color:"#f9fafb",border:"none",borderRadius:9,padding:"12px 20px",fontFamily:"'Inter',sans-serif",fontWeight:700,fontSize:13,cursor:"pointer" },
-  btnGhost: { background:"transparent",color:"#6b7280",border:"1px solid #374151",borderRadius:9,padding:"11px 20px",fontFamily:"'Inter',sans-serif",fontSize:12,cursor:"pointer" },
-  adminTab: { background:"#111827",border:"1px solid #374151",color:"#9ca3af",borderRadius:7,padding:"8px 13px",fontFamily:"'Inter',sans-serif",fontSize:12,cursor:"pointer",fontWeight:600 },
-  card: { background:"#111827",border:"1px solid #1f2937",borderRadius:13,padding:18 },
-  sHead: { fontSize:10,fontWeight:700,letterSpacing:2,color:"#6b7280",textTransform:"uppercase",marginBottom:12 },
-  settleBtn: { background:"rgba(34,197,94,0.07)",border:"1px solid rgba(34,197,94,0.2)",color:"#22c55e",borderRadius:7,padding:"8px 13px",fontFamily:"'Inter',sans-serif",fontSize:12,cursor:"pointer",fontWeight:600 },
-  btnWarn: { background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.2)",color:"#fbbf24",borderRadius:7,padding:"9px 13px",fontFamily:"'Inter',sans-serif",fontSize:13,cursor:"pointer",fontWeight:600 },
-  btnWarnSm: { background:"rgba(251,191,36,0.08)",border:"1px solid rgba(251,191,36,0.2)",color:"#fbbf24",borderRadius:7,padding:"7px 11px",fontFamily:"'Inter',sans-serif",fontSize:11,cursor:"pointer",fontWeight:600 },
-  btnDangerSm: { background:"rgba(239,68,68,0.08)",border:"1px solid rgba(239,68,68,0.2)",color:"#f87171",borderRadius:7,padding:"7px 11px",fontFamily:"'Inter',sans-serif",fontSize:11,cursor:"pointer",fontWeight:600 },
-  adjBtn: { background:"#1f2937",border:"1px solid #374151",color:"#9ca3af",borderRadius:6,padding:"4px 9px",fontFamily:"'Inter',sans-serif",fontSize:11,cursor:"pointer" },
+function Toast({ n }) {
+  return <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", background: n.type === "error" ? "#ef4444" : "#16a34a", border: `1px solid ${n.type === "error" ? "#fca5a5" : "#bbf7d0"}`, color: "#ffffff", borderRadius: 50, padding: "12px 28px", fontFamily: "'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", fontSize: 14.0, fontWeight: 700, zIndex: 100, whiteSpace: "nowrap", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>{n.msg}</div>;
+}
+
+//  Styles 
+
+const FONT = "'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+const GS = {
+  gameCard: { background: "#0f1923", border: "1px solid #1e2d3d", borderRadius: 12, padding: "14px 16px", marginBottom: 10, overflow: "hidden" },
+  gameCardTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  leagueTag: { fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textTransform: "uppercase" },
+  actionTag: { fontSize: 10, color: "#4a6280", background: "rgba(255,255,255,0.04)", borderRadius: 4, padding: "2px 7px" },
+  maxTag: { fontSize: 10, color: "#f59e0b", background: "rgba(245,158,11,0.12)", borderRadius: 4, padding: "2px 7px", fontWeight: 600 },
+  pauseTag: { fontSize: 10, color: "#f59e0b", background: "rgba(245,158,11,0.12)", borderRadius: 4, padding: "2px 7px", border: "1px solid rgba(245,158,11,0.2)" },
+  settledTag: { fontSize: 10, color: "#22c55e", background: "rgba(34,197,94,0.1)", borderRadius: 4, padding: "2px 7px", border: "1px solid rgba(34,197,94,0.2)" },
+  pauseBar: { fontSize: 12, color: "#92400e", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: 6, padding: "7px 12px", marginBottom: 10 },
+  gameGrid: { display: "flex", gap: 12, alignItems: "stretch" },
+  teamsCol: { display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0, flex: 1 },
+  teamRow: { display: "flex", alignItems: "center", gap: 6, padding: "8px 0" },
+  teamDivider: { height: 1, background: "#1e2d3d" },
+  teamName: { fontSize: 14, fontWeight: 500, color: "#8fa3bb", lineHeight: 1.3 },
+  winDot: { width: 6, height: 6, borderRadius: "50%", background: "#22c55e", flexShrink: 0 },
+  betCols: { flexShrink: 0, minWidth: 0 },
+  colHeader: { flex: 1, fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: "#4a6280", textAlign: "center", padding: "0 2px", textTransform: "uppercase" },
+  betCell: { width: "100%", minWidth: 70, background: "#192433", border: "1.5px solid #1e2d3d", borderRadius: 8, padding: "8px 6px", cursor: "pointer", textAlign: "center", transition: "all 0.12s" },
+  betCellSelected: { background: "#0d2a1a", border: "1.5px solid #22c55e" },
+  betCellWin: { background: "#0d2a1a", border: "1.5px solid #22c55e", opacity: 0.7 },
+  betCellDisabled: { opacity: 0.35, cursor: "not-allowed" },
+  betCellConflict: { opacity: 0.4 },
+  betCellEmpty: { flex: 1 },
+  betCellLine: { fontSize: 12, fontWeight: 700, color: "#c8d8e8", marginBottom: 2, lineHeight: 1.2 },
+  betCellOdds: { fontSize: 15, fontWeight: 800, color: "#4a9eff", fontFamily: "'Barlow Condensed', sans-serif" },
+  betCellAction: { fontSize: 9, color: "#4a6280", marginTop: 2 },
+  winnerBar: { fontSize: 13, color: "#22c55e", fontWeight: 600, padding: "8px 0 2px", marginTop: 6 },
+  stakeRow: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0d1f2d", border: "1px solid #22c55e", borderRadius: 8, padding: "10px 14px", marginTop: 8, gap: 12 },
+  stakeWrap: { display: "flex", alignItems: "center", gap: 4, background: "#192433", borderRadius: 6, padding: "4px 10px" },
+  stakeSym: { color: "#22c55e", fontWeight: 700, fontSize: 14 },
+  stakeInput: { background: "transparent", border: "none", color: "#f8fafc", fontFamily: "inherit", fontSize: 15, width: 80, outline: "none", fontWeight: 700 },
 };
-const B = {
-  settledBadge: { fontSize:9,background:"rgba(34,197,94,0.1)",color:"#22c55e",borderRadius:4,padding:"2px 7px",border:"1px solid rgba(34,197,94,0.2)",fontWeight:700 },
-  pauseBadge: { fontSize:9,background:"rgba(251,191,36,0.08)",color:"#fbbf24",borderRadius:4,padding:"2px 7px",border:"1px solid rgba(251,191,36,0.2)",fontWeight:700 },
+
+// Main app styles
+const F = "'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif";
+const S = {
+  wrap: { minHeight: "100vh", background: "#07111a", color: "#e2e8f0", fontFamily: F, paddingBottom: 160 },
+  center: { minHeight: "100vh", background: "#07111a", display: "flex", alignItems: "center", justifyContent: "center" },
+  loadDot: { width: 10, height: 10, borderRadius: "50%", background: "#4a9eff" },
+
+  // Login
+  loginWrap: { minHeight: "100vh", background: "#07111a", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 },
+  loginBg: { position: "fixed", inset: 0, background: "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(74,158,255,0.06) 0%, transparent 70%)", pointerEvents: "none" },
+  loginCard: { background: "#0f1923", border: "1px solid #1e2d3d", borderRadius: 20, padding: "40px 32px", maxWidth: 380, width: "100%", display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 24px 80px rgba(0,0,0,0.5)" },
+  loginLogoRow: { display: "flex", alignItems: "center", gap: 14, marginBottom: 4 },
+  loginLogoIcon: { fontSize: 38 },
+  loginLogoTitle: { fontSize: 22, fontWeight: 800, letterSpacing: 2, color: "#f8fafc", lineHeight: 1.1, fontFamily: "'Barlow Condensed', sans-serif" },
+  loginLogoSub: { fontSize: 11, color: "#4a6280", marginTop: 3, letterSpacing: 0.5 },
+  loginDivider: { height: 1, background: "#1e2d3d" },
+  loginLabel: { fontSize: 10, color: "#4a6280", letterSpacing: 2, textTransform: "uppercase" },
+  input: { background: "#192433", border: "1px solid #1e2d3d", borderRadius: 10, padding: "13px 16px", color: "#f8fafc", fontFamily: F, fontSize: 14, outline: "none", width: "100%", boxSizing: "border-box" },
+  btnPrimary: { background: "#4a9eff", color: "#07111a", border: "none", borderRadius: 10, padding: "14px 24px", fontFamily: F, fontWeight: 700, fontSize: 14, cursor: "pointer" },
+  btnGhost: { background: "transparent", color: "#4a6280", border: "1px solid #1e2d3d", borderRadius: 10, padding: "12px 24px", fontFamily: F, fontSize: 12, cursor: "pointer" },
+  btnDanger: { background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 10, padding: "12px 20px", fontFamily: F, fontSize: 13, cursor: "pointer", width: "100%" },
+  btnCreate: { flex: 1, background: "#4a9eff", color: "#07111a", border: "none", borderRadius: 8, padding: "10px 8px", fontFamily: F, fontWeight: 700, fontSize: 12, cursor: "pointer" },
+  btnRetry: { background: "transparent", color: "#4a6280", border: "1px solid #1e2d3d", borderRadius: 8, padding: "10px 12px", fontFamily: F, fontSize: 12, cursor: "pointer" },
+
+  // Header
+  header: { background: "#0b161f", borderBottom: "1px solid #1e2d3d", padding: "14px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, zIndex: 10 },
+  headerLeft: { display: "flex", alignItems: "center", gap: 10 },
+  headerIcon: { fontSize: 20 },
+  headerLogo: { fontWeight: 800, fontSize: 16, letterSpacing: 3, color: "#f8fafc", fontFamily: "'Barlow Condensed', sans-serif" },
+  headerRight: { display: "flex", alignItems: "center", gap: 10 },
+  balancePill: { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 20, padding: "5px 14px", display: "flex", alignItems: "baseline", gap: 3 },
+  balanceDollar: { fontSize: 12, color: "#22c55e" },
+  balanceAmt: { fontSize: 15, fontWeight: 700, color: "#22c55e" },
+  avatarBtn: { background: "#4a9eff", color: "#07111a", border: "none", borderRadius: "50%", width: 32, height: 32, fontWeight: 800, cursor: "pointer", fontFamily: F, fontSize: 13 },
+  headerBanner: { background: "linear-gradient(90deg, rgba(245,158,11,0.15), rgba(245,158,11,0.08), rgba(245,158,11,0.15))", borderBottom: "1px solid rgba(245,158,11,0.2)", padding: "10px 18px", fontSize: 13, color: "#fbbf24", textAlign: "center", fontWeight: 500 },
+
+  // Tabs
+  tabs: { display: "flex", borderBottom: "1px solid #1e2d3d", background: "#0b161f", position: "sticky", top: 57, zIndex: 9, overflowX: "auto" },
+  tab: { flex: "1 0 auto", background: "transparent", border: "none", borderBottom: "2px solid transparent", color: "#4a6280", padding: "13px 12px", fontFamily: F, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", letterSpacing: 0.3 },
+  tabActive: { color: "#4a9eff", borderBottom: "2px solid #4a9eff" },
+  content: { padding: "14px 14px 140px" },
+
+  // Futures market card
+  marketCard: { background: "#0f1923", border: "1px solid #1e2d3d", borderRadius: 12, padding: 18, marginBottom: 10 },
+  marketTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  leagueTag: { fontSize: 10, fontWeight: 700, letterSpacing: 1.5, borderRadius: 4, padding: "3px 8px" },
+  settledTag: { fontSize: 10, background: "rgba(34,197,94,0.1)", color: "#22c55e", borderRadius: 4, padding: "3px 8px", border: "1px solid rgba(34,197,94,0.2)" },
+  pausedTag: { fontSize: 10, background: "rgba(245,158,11,0.1)", color: "#f59e0b", borderRadius: 4, padding: "3px 8px", border: "1px solid rgba(245,158,11,0.2)" },
+  pausedBadge: { fontSize: 10, background: "rgba(245,158,11,0.1)", color: "#f59e0b", borderRadius: 4, padding: "2px 8px", border: "1px solid rgba(245,158,11,0.2)" },
+  pausedNotice: { margin: "0 0 12px", fontSize: 12, color: "#92400e", background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.15)", borderRadius: 8, padding: "9px 13px" },
+  maxBetTag: { fontSize: 10, background: "rgba(74,158,255,0.1)", color: "#4a9eff", borderRadius: 4, padding: "3px 8px" },
+  actionTag: { fontSize: 10, color: "#4a6280" },
+  marketTitle: { margin: "0 0 3px", fontSize: 16, fontWeight: 700, lineHeight: 1.3, color: "#f8fafc" },
+  marketSub: { margin: "0 0 14px", fontSize: 11, color: "#4a6280" },
+  winnerAnnounce: { margin: "0 0 12px", fontSize: 14, color: "#22c55e", fontWeight: 700, background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", borderRadius: 8, padding: "9px 13px" },
+  optionGrid: { display: "flex", flexDirection: "column", gap: 8 },
+  optionBtn: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "#192433", border: "1.5px solid #1e2d3d", borderRadius: 10, padding: "12px 16px", cursor: "pointer", width: "100%", transition: "all 0.12s" },
+  optionBtnSelected: { background: "#0d2a1a", border: "1.5px solid #22c55e" },
+  optionBtnDisabled: { opacity: 0.35, cursor: "not-allowed" },
+  optionLabel: { fontSize: 14, color: "#c8d8e8", fontFamily: F, textAlign: "left", fontWeight: 500 },
+  optionOdds: { fontSize: 15, fontWeight: 800, color: "#4a9eff", fontFamily: "'Barlow Condensed', sans-serif" },
+  optionOddsSelected: { color: "#22c55e" },
+  optionMoney: { fontSize: 10, color: "#4a6280" },
+  moneyBar: { height: 2, background: "#1e2d3d", borderRadius: 2, marginTop: 3, marginBottom: 4, overflow: "hidden" },
+  moneyBarFill: { height: "100%", borderRadius: 2, transition: "width 0.4s ease", opacity: 0.6 },
+  stakeRow: { marginTop: 8, background: "#0d1f2d", border: "1.5px solid #22c55e", borderRadius: 10, padding: "10px 14px", display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 },
+  stakeTeam: { fontSize: 11, color: "#22c55e", flex: "1 1 100%", marginBottom: 2, fontWeight: 600 },
+  stakeInputWrap: { display: "flex", alignItems: "center", gap: 4 },
+  stakeDollar: { color: "#22c55e", fontSize: 14, fontWeight: 700 },
+  stakeInput: { background: "transparent", border: "none", borderBottom: "1.5px solid #22c55e", color: "#f8fafc", fontFamily: F, fontSize: 14, width: 90, outline: "none", padding: "2px 4px" },
+  toWin: { fontSize: 12, color: "#22c55e", marginLeft: "auto", fontWeight: 600 },
+
+  // Bet slip footer
+  slipFooter: { position: "fixed", bottom: 0, left: 0, right: 0, background: "#0b161f", borderTop: "1px solid #1e2d3d", padding: "14px 16px", zIndex: 20, boxShadow: "0 -8px 40px rgba(0,0,0,0.7)" },
+  slipModeRow: { display: "flex", gap: 6, marginBottom: 12 },
+  slipModeBtn: { flex: 1, background: "#192433", border: "1px solid #1e2d3d", color: "#4a6280", borderRadius: 8, padding: "8px 12px", fontFamily: F, fontSize: 12, cursor: "pointer", fontWeight: 600 },
+  slipModeBtnActive: { background: "rgba(34,197,94,0.1)", border: "1.5px solid #22c55e", color: "#22c55e", fontWeight: 700 },
+  slipSummary: { background: "#192433", border: "1px solid #1e2d3d", borderRadius: 10, padding: "10px 14px", marginBottom: 10 },
+  slipSummaryRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  slipSummaryLabel: { fontSize: 11, color: "#4a6280" },
+  slipSummaryVal: { fontSize: 14, fontWeight: 700 },
+  placeBetBtn: { width: "100%", background: "#4a9eff", color: "#07111a", border: "none", borderRadius: 10, padding: "14px", fontFamily: F, fontWeight: 800, fontSize: 14, cursor: "pointer", letterSpacing: 0.5 },
+
+  // Bet cards (My Bets tab)
+  betCard: { background: "#0f1923", border: "1px solid #1e2d3d", borderRadius: 12, padding: 16, marginBottom: 10 },
+  betCardWon: { border: "1px solid rgba(34,197,94,0.3)", background: "rgba(34,197,94,0.05)" },
+  betCardLost: { border: "1px solid rgba(239,68,68,0.2)", background: "rgba(239,68,68,0.03)" },
+  betCardTop: { display: "flex", justifyContent: "space-between", marginBottom: 8 },
+  betMarket: { fontSize: 11, color: "#4a6280" },
+  betPick: { fontSize: 15, fontWeight: 700, marginBottom: 8, color: "#f8fafc" },
+  betAmounts: { display: "flex", justifyContent: "space-between", fontSize: 12, color: "#4a6280", marginTop: 8 },
+
+  // Leaderboard
+  empty: { textAlign: "center", padding: "60px 20px" },
+  emptyText: { color: "#4a6280", fontSize: 13, margin: 0 },
+  boardRow: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" },
+  boardLeft: { display: "flex", alignItems: "center", gap: 12 },
+  boardRight: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 2 },
+  boardRank: { fontSize: 16, color: "#f8fafc", width: 32, fontWeight: 700 },
+  boardName: { fontSize: 15, fontWeight: 600 },
+  boardBal: { fontSize: 16, fontWeight: 700, color: "#22c55e" },
+
+  // Admin
+  adminWrap: { minHeight: "100vh", background: "#07111a", color: "#e2e8f0", fontFamily: F, padding: "20px 16px" },
+  adminHeader: { display: "flex", alignItems: "center", gap: 16, marginBottom: 24 },
+  backBtn: { background: "transparent", border: "1px solid #1e2d3d", color: "#4a6280", borderRadius: 8, padding: "8px 14px", cursor: "pointer", fontFamily: F, fontSize: 12 },
+  adminTitleRow: { display: "flex", flexDirection: "column" },
+  adminTitle: { fontSize: 18, letterSpacing: 3, color: "#f8fafc", fontWeight: 800, lineHeight: 1, fontFamily: "'Barlow Condensed', sans-serif" },
+  adminTitleSub: { fontSize: 11, color: "#4a6280", marginTop: 3 },
+  pinWrap: { display: "flex", flexDirection: "column", gap: 12, maxWidth: 300 },
+  pinLabel: { color: "#4a6280", fontSize: 13, margin: 0 },
+  adminTabRow: { display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" },
+  adminTab: { background: "#0f1923", border: "1px solid #1e2d3d", color: "#4a6280", borderRadius: 8, padding: "8px 14px", fontFamily: F, fontSize: 12, cursor: "pointer", fontWeight: 600 },
+  adminTabActive: { background: "#4a9eff", color: "#07111a", border: "1px solid #4a9eff", fontWeight: 700 },
+  adminContent: { display: "flex", flexDirection: "column", gap: 14 },
+  adminSection: { background: "#0f1923", border: "1px solid #1e2d3d", borderRadius: 14, padding: 18 },
+  sectionHead: { margin: "0 0 14px", fontSize: 10, letterSpacing: 2, color: "#4a6280", fontWeight: 700, textTransform: "uppercase" },
+  leaderRow: { display: "flex", alignItems: "center", gap: 8, padding: "8px 0", borderBottom: "1px solid #1a2530", flexWrap: "wrap" },
+  leaderRank: { fontSize: 11, color: "#4a6280", width: 22 },
+  leaderName: { flex: 1, fontSize: 14, fontWeight: 500, minWidth: 80, color: "#f8fafc" },
+  leaderBal: { fontSize: 14, fontWeight: 700, color: "#22c55e" },
+  adjustBtn: { background: "#192433", border: "1px solid #1e2d3d", color: "#4a6280", borderRadius: 6, padding: "4px 10px", fontFamily: F, fontSize: 12, cursor: "pointer" },
+  adjustRow: { display: "flex", gap: 8, alignItems: "center", padding: "8px 0 12px", borderBottom: "1px solid #1a2530" },
+  settleCard: { background: "#0a1420", border: "1px solid #1e2d3d", borderRadius: 10, padding: 14, marginBottom: 10 },
+  settleTitle: { fontSize: 13, fontWeight: 700, marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between", color: "#f8fafc" },
+  settledBadge: { fontSize: 10, background: "rgba(34,197,94,0.1)", color: "#22c55e", borderRadius: 4, padding: "2px 8px", border: "1px solid rgba(34,197,94,0.2)" },
+  settleOptions: { display: "flex", flexDirection: "column", gap: 6 },
+  settleBtn: { background: "rgba(34,197,94,0.08)", border: "1px solid rgba(34,197,94,0.2)", color: "#22c55e", borderRadius: 8, padding: "9px 14px", fontFamily: F, fontSize: 12, cursor: "pointer", textAlign: "left", fontWeight: 600 },
+  winnerText: { margin: 0, fontSize: 13, color: "#4a9eff", fontWeight: 700 },
+  formRow: { marginBottom: 14 },
+  formLabel: { display: "block", fontSize: 10, color: "#4a6280", letterSpacing: 1, marginBottom: 6, fontWeight: 700, textTransform: "uppercase" },
+  toggleRow: { display: "flex", gap: 8 },
+  toggleBtn: { flex: 1, background: "#192433", border: "1px solid #1e2d3d", color: "#4a6280", borderRadius: 8, padding: 10, fontFamily: F, fontSize: 13, cursor: "pointer" },
+  toggleBtnActive: { background: "#4a9eff", color: "#07111a", border: "1px solid #4a9eff", fontWeight: 700 },
+  oddsRow: { display: "flex", gap: 8 },
+  removeBtn: { background: "rgba(239,68,68,0.1)", color: "#ef4444", border: "none", borderRadius: 6, width: 36, height: 44, cursor: "pointer", flexShrink: 0, fontSize: 12 },
+  addOptionBtn: { background: "transparent", border: "1px dashed #1e2d3d", color: "#4a6280", borderRadius: 8, padding: 10, fontFamily: F, fontSize: 12, cursor: "pointer", width: "100%", marginTop: 4 },
+  betRow: { background: "#0a1420", border: "1px solid #1e2d3d", borderRadius: 10, padding: 12, marginBottom: 8 },
+  betRowTop: { display: "flex", justifyContent: "space-between", marginBottom: 4 },
+  betRowUser: { fontSize: 13, fontWeight: 700, color: "#4a9eff" },
+  betRowMarket: { fontSize: 11, color: "#4a6280", marginBottom: 3 },
+  betRowPick: { fontSize: 14, fontWeight: 600, marginBottom: 7, color: "#f8fafc" },
+  betRowAmounts: { display: "flex", gap: 12, fontSize: 11, color: "#4a6280", flexWrap: "wrap" },
 };
