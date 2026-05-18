@@ -2,17 +2,6 @@ import { useState, useEffect } from "react";
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, get, onValue } from "firebase/database";
 
-//  Font injection 
-if (typeof document !== "undefined" && !document.getElementById("mln-fonts")) {
-  const link = document.createElement("link");
-  const fontBase = "https://fonts.googleapis.com/css2";
-  const fontQuery = "?family=Barlow+Condensed:wght@700;800;900&family=DM+Sans:wght@400;500;600;700&display=swap";
-  link.id = "mln-fonts";
-  link.rel = "stylesheet";
-  link.href = fontBase + fontQuery;
-  document.head.appendChild(link);
-}
-
 //  Firebase Config 
 const firebaseConfig = {
   apiKey: "AIzaSyClIKmR4FTthxNXtYJZS8Ef6U6RvcvBKGg",
@@ -93,10 +82,11 @@ function combinedAmericanOdds(legs) {
   return dec >= 2 ? Math.round((dec - 1) * 100) : Math.round(-100 / (dec - 1));
 }
 function leagueMeta(subtitle = "") {
-  if (subtitle.toLowerCase().includes("lunar")) return { tag: "LUNAR", color: "#3b82f6", bg: "rgba(88,166,255,0.08)" };
-  if (subtitle.toLowerCase().includes("galactic")) return { tag: "GALACTIC", color: "#8b5cf6", bg: "rgba(188,140,255,0.08)" };
-  if (subtitle.toLowerCase().includes("toos") || subtitle.toLowerCase().includes("championship")) return { tag: "ToOS", color: "#6366f1", bg: "rgba(212,168,67,0.08)" };
-  return { tag: "FUTURE", color: "#94a3b8", bg: "transparent" };
+  const s = (subtitle || "").toLowerCase();
+  if (s.includes("lunar")) return { tag: "LUNAR", color: "#1E5FFF", bg: "rgba(30,95,255,0.08)" };
+  if (s.includes("galactic")) return { tag: "GALACTIC", color: "#C93DD9", bg: "rgba(201,61,217,0.08)" };
+  if (s.includes("toos") || s.includes("championship")) return { tag: "ToOS", color: "#FFB800", bg: "rgba(255,184,0,0.10)" };
+  return { tag: "FUTURE", color: "#6571A0", bg: "rgba(101,113,160,0.08)" };
 }
 
 //  Storage 
@@ -127,21 +117,22 @@ function PinPad({ value, onChange, label, sublabel, error }) {
     if (k === "" || value.length >= 4) return;
     onChange(value + k);
   }
+  const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', system-ui, sans-serif";
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
       <div>
-        <p style={{ margin: "0 0 4px", fontSize: 14.0, color: "#64748b", textAlign: "center" }}>{label}</p>
-        {sublabel && <p style={{ margin: 0, fontSize: 12.0, color: "#94a3b8", textAlign: "center" }}>{sublabel}</p>}
+        <p style={{ margin: "0 0 4px", fontSize: 13, color: "#2A3970", textAlign: "center", fontWeight: 500, fontFamily: SANS }}>{label}</p>
+        {sublabel && <p style={{ margin: 0, fontSize: 11, color: "#6571A0", textAlign: "center", fontFamily: SANS }}>{sublabel}</p>}
       </div>
-      <div style={{ display: "flex", gap: 16 }}>
+      <div style={{ display: "flex", gap: 14 }}>
         {[0,1,2,3].map(i => (
-          <div key={i} style={{ width: 14, height: 14, borderRadius: "50%", background: i < value.length ? "#6366f1" : "transparent", border: `2px solid ${i < value.length ? "#6366f1" : error ? "#ef4444" : "#e2e8f0"}`, transition: "all 0.15s" }} />
+          <div key={i} style={{ width: 12, height: 12, borderRadius: "50%", background: i < value.length ? "#0A1747" : "transparent", border: `1.5px solid ${i < value.length ? "#0A1747" : error ? "#E0254E" : "#DDE0EE"}`, transition: "all 0.15s" }} />
         ))}
       </div>
-      {error && <p style={{ margin: "-10px 0 -6px", fontSize: 12.0, color: "#ef4444", textAlign: "center" }}>{error}</p>}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, width: 200 }}>
+      {error && <p style={{ margin: "-8px 0 -4px", fontSize: 13, color: "#E0254E", textAlign: "center", fontFamily: SANS, fontWeight: 500 }}>{error}</p>}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, width: 200 }}>
         {keys.map((k, i) => (
-          <button key={i} onClick={() => press(k)} style={{ height: 54, background: k === "" ? "transparent" : "#ffffff", border: k === "" ? "none" : "1px solid #e2e8f0", borderRadius: 12, color: k === "\u232B" ? "#94a3b8" : "#1e293b", fontSize: k === "\u232B" ? 18 : 20, fontWeight: 600, cursor: k === "" ? "default" : "pointer", fontFamily: "'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", pointerEvents: k === "" ? "none" : "auto" }}>
+          <button key={i} onClick={() => press(k)} style={{ height: 52, background: k === "" ? "transparent" : "#FFFFFF", border: k === "" ? "none" : "1px solid #DDE0EE", borderRadius: 4, color: k === "\u232B" ? "#6571A0" : "#0A1747", fontSize: k === "\u232B" ? 16 : 18, fontWeight: 700, cursor: k === "" ? "default" : "pointer", fontFamily: SANS, fontVariantNumeric: "tabular-nums", pointerEvents: k === "" ? "none" : "auto" }}>
             {k}
           </button>
         ))}
@@ -150,23 +141,27 @@ function PinPad({ value, onChange, label, sublabel, error }) {
   );
 }
 
-// ── Icon constants (avoids multi-byte unicode in JSX text) ──
+
+// ── Design tokens (BOOKD) ────────────────────────────────────────────────
+const C = {
+  bg: "#FBFAFF", rail: "#EEF0FA", tile: "#FFFFFF",
+  tileHot: "#FFE9EB", tilePos: "#E2F7E9",
+  line: "#DDE0EE", lineAccent: "#F3A5A5", linePos: "#A3D8B3",
+  ink: "#0A1747", ink2: "#2A3970", sub: "#6571A0",
+  accent: "#E0254E", pos: "#15A35A", gold: "#FFB800",
+  activeNav: "#E2E7FB",
+  catSports: "#1E5FFF", catPolitics: "#15A35A", catPop: "#C93DD9",
+  catPersonal: "#FF6A1F", catMadeup: "#FFB800",
+};
+const SANS = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', system-ui, sans-serif";
+const TAB = { fontVariantNumeric: "tabular-nums" };
+
+// ── Icon set (text glyphs only — system fonts, no Google Font) ──
 const I = {
-  baseball:  "\u26BE",
-  trophy:    "\uD83C\uDFC6",
-  stadium:   "\uD83C\uDFDF\uFE0F",
-  crystal:   "\uD83D\uDD2E",
-  medal:     "\uD83C\uDF96\uFE0F",
-  check:     "\u2713",
-  cross:     "\u2717",
-  pending:   "\u23F3",
-  pause:     "\u23F8",
-  play:      "\u25B6",
-  undo:      "\u21BA",
-  dollar:    "$",
-  bullet:    "\u00B7",
-  arrow:     "\u2192",
-  fire:      "\uD83D\uDD25",
+  check: "\u2713", cross: "\u2717", undo: "\u21BA",
+  pending: "\u00B7\u00B7\u00B7", arrow: "\u2192",
+  pause: "\u275A\u275A", play: "\u25B6",
+  plus: "+", dot: "\u25CF", bullet: "\u00B7",
 };
 
 // ── App ─────────────────────────────────────────────────────────────────
@@ -180,9 +175,9 @@ export default function App() {
   const [siteMaxBet, setSiteMaxBet] = useState(null);
 
   // ── Session state ─────────
-  const [screen, setScreen] = useState("login"); // login | lobby | admin
+  const [screen, setScreen] = useState("login");
   const [username, setUsername] = useState("");
-  const [loginStep, setLoginStep] = useState("name"); // name | pin_login | pin_create | pin_confirm
+  const [loginStep, setLoginStep] = useState("name");
   const [inputName, setInputName] = useState("");
   const [pinInput, setPinInput] = useState("");
   const [pinError, setPinError] = useState("");
@@ -191,7 +186,7 @@ export default function App() {
 
   // ── Lobby state ─────────
   const [activeTab, setActiveTab] = useState("games");
-  const [gamesFilter, setGamesFilter] = useState("open"); // open | resolved
+  const [gamesFilter, setGamesFilter] = useState("open");
   const [betSlip, setBetSlip] = useState({});
   const [parlayStake, setParlayStake] = useState("");
 
@@ -218,7 +213,6 @@ export default function App() {
   async function saveMarkets(m) { setMarkets(m); await storageSet("mln_markets", m); }
   async function saveBets(b) { setBets(b); await storageSet("mln_bets", b); }
 
-  // ── Load from Firebase on mount + subscribe ─────────
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -236,7 +230,6 @@ export default function App() {
       setHeaderMsg(hm || "");
       setSiteMaxBet(sm || null);
     })();
-    // Subscribe to live updates
     const unsubs = [
       onValue(ref(db, "mln_users"), s => { if (s.exists()) setUsers(parseFirebase(s.val()) || {}); }),
       onValue(ref(db, "mln_markets"), s => { if (s.exists()) { const v = parseFirebase(s.val()); if (v && v.games) setMarkets(v); } }),
@@ -248,7 +241,6 @@ export default function App() {
     return () => { mounted = false; unsubs.forEach(u => u()); };
   }, []);
 
-  // ── Inactivity timeout (30 min) ─────────
   useEffect(() => {
     if (screen !== "lobby") return;
     let timer;
@@ -258,7 +250,6 @@ export default function App() {
     return () => { clearTimeout(timer); ["mousemove", "keydown", "click", "touchstart"].forEach(e => window.removeEventListener(e, reset)); };
   }, [screen]);
 
-  // ── Notification timer ─────────
   useEffect(() => {
     if (!notification) return;
     const t = setTimeout(() => setNotification(""), 3000);
@@ -269,19 +260,16 @@ export default function App() {
 
   function notify(msg) { setNotification(msg); }
 
-  // ── PIN-pad auto-submit ─────────
   useEffect(() => {
     if (loginStep !== "pin_login" || pinInput.length !== 4) return;
     const t = setTimeout(() => handlePinComplete(pinInput), 150);
     return () => clearTimeout(t);
   }, [pinInput, loginStep]);
-
   useEffect(() => {
     if (loginStep !== "pin_create" || pinInput.length !== 4) return;
     const t = setTimeout(() => { setPendingPin(pinInput); setLoginStep("pin_confirm"); setPinInput(""); }, 150);
     return () => clearTimeout(t);
   }, [pinInput, loginStep]);
-
   useEffect(() => {
     if (loginStep !== "pin_confirm" || pinInput.length !== 4) return;
     const t = setTimeout(() => handlePinComplete(pinInput), 150);
@@ -308,18 +296,17 @@ export default function App() {
         const newUsers = { ...users, [name]: { balance: STARTING_BALANCE, pin: pendingPin, createdAt: Date.now() } };
         await saveUsers(newUsers);
         setUsername(name); setScreen("lobby"); setInputName(""); setLoginStep("name"); setPinInput(""); setPinError(""); setPendingPin("");
-      } else { setPinError("PINs don't match"); setPinInput(""); setLoginStep("pin_create"); setPendingPin(""); }
+      } else { setPinError("PINs do not match"); setPinInput(""); setLoginStep("pin_create"); setPendingPin(""); }
     }
   }
 
   function resetLoginToName() { setLoginStep("name"); setPinInput(""); setPinError(""); setPendingPin(""); }
 
-  // ── Derived state (safely guarded against bad Firebase shapes) ─────────
+  // ── Derived state ─────────
   const allMarkets = [...(markets.games || []), ...(markets.futures || [])];
   const balance = users[username]?.balance ?? STARTING_BALANCE;
   const userBets = bets.filter(b => b.username === username);
 
-  // Bet slip leg info
   const slipEntries = Object.entries(betSlip);
   const slipLegs = slipEntries.map(([optId, v]) => {
     const market = allMarkets.find(m => m.id === v.marketId);
@@ -329,10 +316,8 @@ export default function App() {
   const multiMarket = new Set(slipEntries.map(([, v]) => v.marketId)).size > 1;
   const slipHasFuture = slipLegs.some(l => allMarkets.find(m => m.id === l.marketId)?.type === "future");
 
-  // Base game title — strip " - Spread" and " - O/U 7.5"
   const getBaseTitle = (title) => (title || "").replace(/ - Spread$/, "").replace(/ - O\/U [\d.]+$/, "");
 
-  // Parlay conflict: block ML+Spread same game. ML+OU and Spread+OU OK.
   const hasSameGameConflict = (() => {
     const info = slipLegs.map(l => {
       const m = allMarkets.find(x => x.id === l.marketId);
@@ -354,14 +339,12 @@ export default function App() {
   const straightTotal = slipLegs.reduce((acc, l) => acc + (parseFloat(l.stake) || 0), 0);
   const straightPayout = slipLegs.reduce((acc, l) => acc + (parseFloat(l.stake) > 0 ? calcPayout(parseFloat(l.stake), l.odds) : 0), 0);
 
-  // Option totals (money on each option)
   const optionTotals = {};
   for (const b of bets) {
     if (b.betType === "straight") optionTotals[b.optionId] = (optionTotals[b.optionId] || 0) + b.stake;
     else if (b.betType === "parlay") for (const leg of (b.legs || [])) optionTotals[leg.optionId] = (optionTotals[leg.optionId] || 0) + b.stake;
   }
 
-  // Leaderboard
   const leaderboardRaw = Object.entries(users).map(([name, u]) => {
     const pendingAmt = bets.filter(b => b.username === name && b.status === "pending").reduce((s, b) => s + b.stake, 0);
     return { name, u, pendingAmt, total: (u.balance || 0) + pendingAmt };
@@ -376,7 +359,6 @@ export default function App() {
     return acc;
   }, []);
 
-  // Markets filtered by Open/Resolved
   const rawGames = markets.games || [];
   const rawFutures = markets.futures || [];
   const displayMarkets = activeTab === "games"
@@ -387,33 +369,11 @@ export default function App() {
         ? rawFutures.filter(m => m.status === "open" || m.status === "paused")
         : rawFutures.filter(m => m.status === "settled"));
 
-  // ── House P&L per market ──
-  function getMarketPnL(marketId) {
-    const relevant = bets.filter(b => {
-      if (b.betType === "straight") return b.marketId === marketId && (b.status === "won" || b.status === "lost" || b.status === "pushed");
-      if (b.betType === "parlay") return (b.legs || []).some(l => l.marketId === marketId) && (b.status === "won" || b.status === "lost" || b.status === "pushed");
-      return false;
-    });
-    let staked = 0, paid = 0;
-    for (const b of relevant) {
-      if (b.betType === "straight") {
-        staked += b.stake;
-        if (b.status === "won") paid += b.payout;
-        if (b.status === "pushed") paid += b.stake;
-      } else if (b.betType === "parlay") {
-        staked += b.stake;
-        if (b.status === "won") paid += b.payout;
-        if (b.status === "pushed") paid += b.stake;
-      }
-    }
-    return staked - paid;
-  }
   function getHouseLifetimePnL() {
     let total = 0;
     for (const b of bets) {
       if (b.status === "won") total -= (b.payout - b.stake);
       else if (b.status === "lost") total += b.stake;
-      // pushes are wash
     }
     return total;
   }
@@ -426,8 +386,22 @@ export default function App() {
     }
     return pnl;
   }
+  function getMarketPnL(marketId) {
+    const relevant = bets.filter(b => {
+      if (b.betType === "straight") return b.marketId === marketId && (b.status === "won" || b.status === "lost" || b.status === "pushed");
+      if (b.betType === "parlay") return (b.legs || []).some(l => l.marketId === marketId) && (b.status === "won" || b.status === "lost" || b.status === "pushed");
+      return false;
+    });
+    let staked = 0, paid = 0;
+    for (const b of relevant) {
+      staked += b.stake;
+      if (b.status === "won") paid += b.payout;
+      if (b.status === "pushed") paid += b.stake;
+    }
+    return staked - paid;
+  }
 
-  // ── Bet placement ──
+  // ── Action handlers ──
   async function placeStraight(optionId, stake) {
     const v = betSlip[optionId];
     if (!v || !stake || stake <= 0) return;
@@ -473,7 +447,7 @@ export default function App() {
     await saveUsers({ ...users, [username]: { ...users[username], balance: balance - stake } });
     await saveBets([...bets, newBet]);
     setBetSlip({}); setParlayStake("");
-    notify(`Parlay placed: $${stake} -> $${payout.toFixed(2)}`);
+    notify(`Parlay placed: $${stake} ${I.arrow} $${payout.toFixed(2)}`);
   }
 
   function toggleSlip(option, marketId, market) {
@@ -486,7 +460,6 @@ export default function App() {
   }
   function setSlipStake(optId, val) { setBetSlip({ ...betSlip, [optId]: { ...betSlip[optId], stake: val } }); }
 
-  // ── Admin actions ──
   async function settleMarket(marketId, winningOptionId) {
     const settle = m => m.id === marketId ? { ...m, status: "settled", winner: winningOptionId } : m;
     const newMarkets = { games: (markets.games || []).map(settle), futures: (markets.futures || []).map(settle) };
@@ -703,105 +676,141 @@ export default function App() {
     const upd = m => m.id !== marketId ? m : { ...m, options: (m.options || []).map(o => o.id === optId ? { ...o, odds: newOdds } : o) };
     await saveMarkets({ games: (markets.games || []).map(upd), futures: (markets.futures || []).map(upd) });
   }
-  async function updateMarketTitle(marketId, newTitle) {
-    const upd = m => m.id === marketId ? { ...m, title: newTitle } : m;
-    await saveMarkets({ games: (markets.games || []).map(upd), futures: (markets.futures || []).map(upd) });
-  }
 
-  // ── Bet slip render helper (plain function, NOT a React component) ──
-  function renderCell(opt, market, colType) {
-    if (!opt) return <div style={GS.cell} />;
+  // ── Render helpers (plain functions, NOT components-in-map) ──
+  function renderCell(opt, market, label) {
+    if (!opt) return <div style={GS.cellEmpty} />;
     const isElim = (market.eliminated || []).includes(opt.id);
-    if (isElim) return <div style={{ ...GS.cell, opacity: 0.4 }}><div style={GS.cellLabel}>OUT</div><div style={GS.cellOdds}>—</div></div>;
+    if (isElim) return <div style={{ ...GS.cell, opacity: 0.4, cursor: "not-allowed" }}><div style={GS.cellLabel}>OUT</div><div style={GS.cellOdds}>—</div></div>;
     const selected = !!betSlip[opt.id];
     const disabled = market.status !== "open";
+    const userHasBet = bets.some(b => b.username === username && (
+      (b.betType === "straight" && b.optionId === opt.id) ||
+      (b.betType === "parlay" && (b.legs || []).some(l => l.optionId === opt.id))
+    ));
     const totalOnOpt = optionTotals[opt.id] || 0;
     const totalOnMkt = (market.options || []).reduce((s, o) => s + (optionTotals[o.id] || 0), 0);
     const pct = totalOnMkt > 0 ? (totalOnOpt / totalOnMkt) * 100 : 0;
+    // "Hot" = >70% of mkt action and >2x other side
+    const others = (market.options || []).filter(o => o.id !== opt.id).reduce((s, o) => s + (optionTotals[o.id] || 0), 0);
+    const isHot = totalOnOpt > others * 2 && totalOnMkt > 50;
+
+    const style = {
+      ...GS.cell,
+      ...(userHasBet ? { background: C.tilePos, borderColor: C.linePos } : {}),
+      ...(isHot && !userHasBet ? { background: C.tileHot, borderColor: C.lineAccent } : {}),
+      ...(selected ? { background: C.ink, borderColor: C.ink, color: "#fff" } : {}),
+      ...(disabled ? { opacity: 0.4, cursor: "not-allowed" } : {}),
+    };
+    const oddsColor = selected ? "#fff"
+      : userHasBet ? C.pos
+      : isHot ? C.accent
+      : opt.odds > 0 ? C.pos
+      : C.ink;
     return (
-      <div style={{ ...GS.cell, ...(selected ? GS.cellSelected : {}), ...(disabled ? GS.cellDisabled : {}) }}
-        onClick={() => !disabled && toggleSlip(opt, market.id, market)}>
-        <div style={GS.cellLabel}>{opt.label}</div>
-        <div style={{ ...GS.cellOdds, color: selected ? "#f8fafc" : opt.odds > 0 ? "#4ade80" : "#f8fafc" }}>{fmt(opt.odds)}</div>
-        {totalOnMkt > 0 && <div style={GS.cellBar}><div style={{ ...GS.cellBarFill, width: `${pct}%` }} /></div>}
+      <div style={style} onClick={() => !disabled && toggleSlip(opt, market.id, market)}>
+        <div style={{ ...GS.cellLabel, color: selected ? "rgba(255,255,255,0.7)" : C.sub }}>{label || opt.label}</div>
+        <div style={{ ...GS.cellOdds, color: oddsColor }}>{fmt(opt.odds)}</div>
+        {totalOnMkt > 0 && <div style={GS.cellBar}><div style={{ ...GS.cellBarFill, width: `${pct}%`, background: selected ? "rgba(255,255,255,0.4)" : isHot ? C.accent : C.ink2 }} /></div>}
       </div>
     );
   }
 
-  // ── Lobby render ──
+  // Team chip: takes label, returns 22x22 colored block with 3-letter code
+  function teamChip(label, color) {
+    const code = (label || "")
+      .replace(/[^A-Za-z\s]/g, "")
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(w => w[0])
+      .join("")
+      .slice(0, 3)
+      .toUpperCase() || "—";
+    return (
+      <div style={{ width: 22, height: 22, borderRadius: 4, background: color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <span style={{ fontSize: 8, fontWeight: 800, color: "#fff", letterSpacing: 0.3, fontFamily: SANS }}>{code}</span>
+      </div>
+    );
+  }
+
+  // ── LOGIN SCREEN ──
   if (screen === "login") {
     const name = inputName.trim();
     return (
       <div style={S.loginWrap}>
-        <div style={S.loginBg} />
         <div style={S.loginCard}>
           <div style={S.loginLogoRow}>
-            <span style={S.loginLogoIcon}>{I.baseball}</span>
+            <div style={S.loginLogoBlock} />
             <div>
-              <div style={S.loginLogoTitle}>MLN BETTING</div>
-              <div style={S.loginLogoSub}>Fake Money. Real Bragging Rights.</div>
+              <div style={S.loginLogoTitle}>BOOKD</div>
+              <div style={S.loginLogoSub}>Custom bets between friends</div>
             </div>
           </div>
-          <div style={S.loginDivider} />
           {loginStep === "name" && (<>
             <label style={S.loginLabel}>PLAYER NAME</label>
-            <input style={S.input} placeholder="Enter your name..." value={inputName}
+            <input style={S.input} placeholder="your name..." value={inputName}
               onChange={e => setInputName(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && inputName.trim() && handleNameSubmit()} />
-            {pinError && <p style={{ margin: "-6px 0 -2px", fontSize: 12, color: "#ef4444" }}>{pinError}</p>}
-            <button style={{ ...S.btnPrimary, opacity: inputName.trim() ? 1 : 0.4 }} onClick={handleNameSubmit} disabled={!inputName.trim()}>Continue</button>
-            <button style={S.btnGhost} onClick={() => setScreen("admin")}>Admin Panel</button>
+              onKeyDown={e => e.key === "Enter" && inputName.trim() && handleNameSubmit()} autoFocus />
+            {pinError && <p style={{ margin: "-6px 0 0", fontSize: 13, color: C.accent, fontWeight: 500 }}>{pinError}</p>}
+            <button style={{ ...S.btnPrimary, opacity: inputName.trim() ? 1 : 0.4 }} onClick={handleNameSubmit} disabled={!inputName.trim()}>CONTINUE</button>
+            <button style={S.btnGhost} onClick={() => setScreen("admin")}>admin panel</button>
           </>)}
           {loginStep === "pin_login" && (<>
-            <div style={{ textAlign: "center", marginBottom: 4 }}>
-              <span style={{ fontSize: 13, color: "#64748b" }}>Welcome back, </span>
-              <span style={{ fontSize: 13, color: "#6366f1", fontWeight: 700 }}>{name}</span>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 13, color: C.sub, marginBottom: 2 }}>welcome back,</div>
+              <div style={{ fontSize: 18, color: C.ink, fontWeight: 800, letterSpacing: -0.3 }}>{name}</div>
             </div>
             <PinPad value={pinInput} onChange={p => { setPinInput(p); if (pinError) setPinError(""); }} label="Enter your PIN" error={pinError} />
-            <button style={S.btnGhost} onClick={resetLoginToName}>Back</button>
+            <button style={S.btnGhost} onClick={resetLoginToName}>back</button>
           </>)}
           {loginStep === "pin_create" && (<>
-            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 10, padding: "12px 14px" }}>
-              <p style={{ margin: "0 0 4px", fontSize: 14, color: "#16a34a", fontWeight: 700 }}>Account not found</p>
-              <p style={{ margin: "0 0 8px", fontSize: 13, color: "#64748b" }}>No account for <strong style={{ color: "#1e293b" }}>{name}</strong>. Create one below.</p>
+            <div style={{ background: C.tilePos, border: `1px solid ${C.linePos}`, borderRadius: 6, padding: "12px 14px" }}>
+              <p style={{ margin: "0 0 4px", fontSize: 14, color: C.pos, fontWeight: 700, letterSpacing: -0.2 }}>New account</p>
+              <p style={{ margin: 0, fontSize: 13, color: C.ink2 }}>No account for <strong style={{ color: C.ink }}>{name}</strong>. Pick a PIN to create one.</p>
             </div>
-            <PinPad value={pinInput} onChange={setPinInput} label="Choose a 4-digit PIN" sublabel="You will use this every time you log in" />
-            <button style={S.btnGhost} onClick={resetLoginToName}>Back</button>
+            <PinPad value={pinInput} onChange={setPinInput} label="Choose a 4-digit PIN" sublabel="You will use this to log in" />
+            <button style={S.btnGhost} onClick={resetLoginToName}>back</button>
           </>)}
           {loginStep === "pin_confirm" && (<>
             <PinPad value={pinInput} onChange={p => { setPinInput(p); if (pinError) setPinError(""); }} label="Confirm your PIN" sublabel="Enter it again" error={pinError} />
-            <button style={S.btnGhost} onClick={() => { setLoginStep("pin_create"); setPinInput(""); setPinError(""); }}>Back</button>
+            <button style={S.btnGhost} onClick={() => { setLoginStep("pin_create"); setPinInput(""); setPinError(""); }}>back</button>
           </>)}
         </div>
       </div>
     );
   }
 
-  // ── Admin screen ──
+  // ── ADMIN ──
   if (screen === "admin") {
     if (!adminUnlocked) {
       return (
         <div style={S.loginWrap}>
-          <div style={S.loginBg} />
           <div style={S.loginCard}>
             <div style={S.loginLogoRow}>
-              <span style={S.loginLogoIcon}>{I.baseball}</span>
+              <div style={{ ...S.loginLogoBlock, background: `linear-gradient(135deg, ${C.ink} 0%, ${C.ink2} 100%)` }} />
               <div>
                 <div style={S.loginLogoTitle}>ADMIN</div>
-                <div style={S.loginLogoSub}>Restricted Area</div>
+                <div style={S.loginLogoSub}>Restricted access</div>
               </div>
             </div>
-            <div style={S.loginDivider} />
-            <PinPad value={adminPin} onChange={p => {
-              setAdminPin(p);
-              if (p.length === 4) {
-                setTimeout(() => {
-                  if (p === ADMIN_PIN) { setAdminUnlocked(true); setAdminPin(""); }
-                  else { setAdminPin(""); notify("Incorrect PIN"); }
-                }, 150);
-              }
-            }} label="Admin PIN" sublabel="6-digit access code" />
-            <button style={S.btnGhost} onClick={() => { setAdminPin(""); setScreen("login"); }}>Back to Login</button>
+            <label style={S.loginLabel}>ADMIN CODE</label>
+            <input type="password" style={S.input} placeholder="Enter admin code"
+              value={adminPin}
+              onChange={e => setAdminPin(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  if (adminPin === ADMIN_PIN) { setAdminUnlocked(true); setAdminPin(""); }
+                  else { setAdminPin(""); notify("Incorrect code"); }
+                }
+              }}
+              autoFocus />
+            <button style={{ ...S.btnPrimary, opacity: adminPin ? 1 : 0.4 }}
+              onClick={() => {
+                if (adminPin === ADMIN_PIN) { setAdminUnlocked(true); setAdminPin(""); }
+                else { setAdminPin(""); notify("Incorrect code"); }
+              }}
+              disabled={!adminPin}>UNLOCK</button>
+            <button style={S.btnGhost} onClick={() => { setAdminPin(""); setScreen("login"); }}>back to login</button>
           </div>
         </div>
       );
@@ -810,7 +819,7 @@ export default function App() {
     return (
       <div style={S.adminWrap}>
         <div style={S.adminHeader}>
-          <button style={S.backBtn} onClick={() => { setAdminUnlocked(false); setAdminPin(""); setScreen("login"); }}>Back</button>
+          <button style={S.btnSecondary} onClick={() => { setAdminUnlocked(false); setAdminPin(""); setScreen("login"); }}>BACK</button>
           <div style={S.adminTitle}>ADMIN PANEL</div>
           <div style={{ width: 56 }} />
         </div>
@@ -827,12 +836,12 @@ export default function App() {
           {adminTab === "settle" && (
             <div>
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-                <button style={{ ...S.settleBtn, flex: 1, background: "#fffbeb", borderColor: "#fde68a", color: "#d97706" }} onClick={pauseAllMarkets}>{I.pause} Pause All</button>
-                <button style={{ ...S.settleBtn, flex: 1 }} onClick={unpauseAllMarkets}>{I.play} Open All</button>
+                <button style={{ ...S.btnGold, flex: 1 }} onClick={pauseAllMarkets}>{I.pause} PAUSE ALL</button>
+                <button style={{ ...S.btnPrimary, flex: 1 }} onClick={unpauseAllMarkets}>{I.play} OPEN ALL</button>
               </div>
-              <div style={{ padding: "10px 14px", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, marginBottom: 16, fontSize: 12 }}>
-                <strong>Lifetime House P&L: </strong>
-                <span style={{ color: getHouseLifetimePnL() >= 0 ? "#16a34a" : "#dc2626", fontWeight: 700 }}>
+              <div style={S.statBox}>
+                <span style={{ ...S.eyebrow, color: C.sub }}>LIFETIME HOUSE P&L</span>
+                <span style={{ ...TAB, color: getHouseLifetimePnL() >= 0 ? C.pos : C.accent, fontWeight: 800, fontSize: 18, marginLeft: 12, letterSpacing: -0.4 }}>
                   ${getHouseLifetimePnL().toFixed(2)}
                 </span>
               </div>
@@ -840,17 +849,18 @@ export default function App() {
                 const meta = leagueMeta(market.subtitle);
                 const totalAction = (market.options || []).reduce((s, o) => s + (optionTotals[o.id] || 0), 0);
                 return (
-                  <div key={market.id} style={S.adminMarketCard}>
+                  <div key={market.id} style={S.adminCard}>
+                    <div style={{ height: 4, background: meta.color, marginLeft: -16, marginRight: -16, marginTop: -16, marginBottom: 12 }} />
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 8, flexWrap: "wrap" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ ...S.leagueTag, color: meta.color, background: meta.bg, display: "inline-block", marginBottom: 4 }}>{meta.tag}</span>
-                        <p style={S.adminMarketTitle}>{market.title}</p>
-                        <p style={S.adminMarketSubtitle}>{market.subtitle}</p>
+                        <span style={{ ...S.catBadge, background: meta.color }}>{meta.tag}</span>
+                        <p style={S.adminCardTitle}>{market.title}</p>
+                        <p style={S.adminCardSub}>{market.subtitle}</p>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
-                        <span style={{ fontSize: 11, color: "#64748b" }}>${totalAction.toFixed(0)} action</span>
-                        <button style={S.pauseBtn} onClick={() => togglePauseMarket(market.id)}>
-                          {market.status === "paused" ? `${I.play} Open` : `${I.pause} Pause`}
+                        <span style={{ ...TAB, fontSize: 13, color: C.sub, fontWeight: 500 }}>${totalAction.toFixed(0)} action</span>
+                        <button style={S.btnGold} onClick={() => togglePauseMarket(market.id)}>
+                          {market.status === "paused" ? `${I.play} OPEN` : `${I.pause} PAUSE`}
                         </button>
                       </div>
                     </div>
@@ -858,53 +868,53 @@ export default function App() {
                     {market.status !== "settled" && (market.options || []).map(opt => {
                       const onOpt = optionTotals[opt.id] || 0;
                       return (
-                        <div key={opt.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#64748b", padding: "2px 0" }}>
+                        <div key={opt.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: C.sub, padding: "3px 0", fontWeight: 500 }}>
                           <span>{opt.label} ({fmt(opt.odds)})</span>
-                          <span>${onOpt.toFixed(0)} — if wins, house P&L: ${((onOpt > 0 ? totalAction - (market.options || []).reduce((s, o) => s + (optionTotals[o.id] || 0) * calcPayout(1, o.odds) * (o.id === opt.id ? 1 : 0), 0) : totalAction)).toFixed(0)}</span>
+                          <span style={TAB}>${onOpt.toFixed(0)}</span>
                         </div>
                       );
                     })}
 
                     {(market.status === "open" || market.status === "paused") ? (
-                      <div style={S.settleOptions}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 10 }}>
                         {(market.options || []).map(opt => {
                           const isElim = (market.eliminated || []).includes(opt.id);
                           if (isElim) return (
-                            <div key={opt.id} style={{ padding: "8px 12px", background: "#fff1f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: 12, color: "#ef4444", opacity: 0.6 }}>
-                              {I.cross} {opt.label} - Eliminated
+                            <div key={opt.id} style={{ padding: "8px 12px", background: C.tileHot, border: `1px solid ${C.lineAccent}`, borderRadius: 4, fontSize: 13, color: C.accent, opacity: 0.7, fontWeight: 500 }}>
+                              {I.cross} {opt.label} — Eliminated
                             </div>
                           );
                           return (
                             <div key={opt.id} style={{ display: "flex", gap: 6 }}>
-                              <button style={{ ...S.settleBtn, flex: 1 }} onClick={() => { if (window.confirm(`Settle ${opt.label} as winner?`)) settleMarket(market.id, opt.id); }}>
+                              <button style={{ ...S.btnPos, flex: 1 }} onClick={() => { if (window.confirm(`Settle ${opt.label} as winner?`)) settleMarket(market.id, opt.id); }}>
                                 {I.check} {opt.label}
                               </button>
                               {market.type === "future" && (
-                                <button style={{ ...S.settleBtn, background: "#fff1f2", borderColor: "#fecaca", color: "#ef4444", flex: "0 0 auto" }}
+                                <button style={{ ...S.btnAccent, flex: "0 0 auto" }}
                                   onClick={() => { if (window.confirm(`Eliminate ${opt.label}? Pending bets become losses. Historical bets preserved.`)) eliminateOption(market.id, opt.id); }}>
-                                  {I.cross} Out
+                                  {I.cross} OUT
                                 </button>
                               )}
                             </div>
                           );
                         })}
-                        <button style={{ ...S.settleBtn, background: "#fffbeb", borderColor: "#fde68a", color: "#d97706", marginTop: 4 }}
+                        <button style={{ ...S.btnGold }}
                           onClick={() => { if (window.confirm(`Push "${market.title}"? Pending bets get stake refunded. Parlay legs are removed.`)) pushMarket(market.id); }}>
-                          {I.undo} Push / Tie (Refund All)
+                          {I.undo} PUSH / TIE (REFUND ALL)
                         </button>
                       </div>
                     ) : (
-                      <div>
+                      <div style={{ marginTop: 10 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                          <p style={S.winnerText}>
-                            {market.winner === "push" ? `${I.undo} Push - bets refunded` : `${I.trophy} ${(market.options || []).find(o => o.id === market.winner)?.label || "Unknown"}`}
+                          <p style={{ fontSize: 14, color: C.pos, fontWeight: 700, margin: 0, letterSpacing: -0.2 }}>
+                            {market.winner === "push" ? `${I.undo} Push — bets refunded` : `${I.check} ${(market.options || []).find(o => o.id === market.winner)?.label || "Unknown"}`}
                           </p>
-                          <button style={{ ...S.settleBtn, background: "#faf5ff", borderColor: "#e9d5ff", color: "#9333ea", fontSize: 11, padding: "5px 10px" }}
+                          <button style={{ ...S.btnSecondary, fontSize: 11, padding: "4px 10px" }}
                             onClick={() => { if (window.confirm("Unsettle this market? Reverses payouts.")) unsettleMarket(market.id); }}>
-                            {I.undo} Unsettle
+                            UNSETTLE
                           </button>
                         </div>
-                        <div style={{ fontSize: 11, color: "#64748b" }}>House P&L: ${getMarketPnL(market.id).toFixed(2)}</div>
+                        <div style={{ fontSize: 13, color: C.sub, ...TAB }}>House P&L: ${getMarketPnL(market.id).toFixed(2)}</div>
                       </div>
                     )}
                   </div>
@@ -916,34 +926,34 @@ export default function App() {
           {adminTab === "players" && (
             <div>
               <h3 style={S.adminH3}>Players ({Object.keys(users).length})</h3>
-              {leaderboard.map((p, i) => {
+              {leaderboard.map(p => {
                 const lifetime = getUserLifetimePnL(p.name);
                 const pin = users[p.name]?.pin || "";
                 const shown = revealPin[p.name];
                 return (
-                  <div key={p.name} style={S.playerRow}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                      <span style={S.playerRank}>#{p._rank}</span>
-                      <span style={S.playerName}>{p.name}</span>
-                      <span style={{ fontSize: 11, color: "#64748b" }}>${(p.u.balance || 0).toFixed(0)} cash + ${p.pendingAmt.toFixed(0)} pending</span>
-                      <span style={{ fontSize: 11, color: lifetime >= 0 ? "#16a34a" : "#dc2626", fontWeight: 700 }}>
-                        Lifetime: {lifetime >= 0 ? "+" : ""}${lifetime.toFixed(0)}
+                  <div key={p.name} style={S.adminCard}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
+                      <span style={{ ...S.eyebrow, color: C.gold }}>#{p._rank}</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: C.ink, letterSpacing: -0.2 }}>{p.name}</span>
+                      <span style={{ ...TAB, fontSize: 13, color: C.sub, fontWeight: 500 }}>${(p.u.balance || 0).toFixed(0)} cash + ${p.pendingAmt.toFixed(0)} pending</span>
+                      <span style={{ ...TAB, fontSize: 13, color: lifetime >= 0 ? C.pos : C.accent, fontWeight: 700 }}>
+                        {lifetime >= 0 ? "+" : ""}${lifetime.toFixed(0)} lifetime
                       </span>
                     </div>
-                    <div style={{ display: "flex", gap: 6, alignItems: "center", marginTop: 6, flexWrap: "wrap" }}>
-                      <button style={S.miniBtn} onClick={() => setRevealPin({ ...revealPin, [p.name]: !shown })}>
-                        {shown ? `PIN: ${pin}` : "Show PIN"}
+                    <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                      <button style={S.btnSecondary} onClick={() => setRevealPin({ ...revealPin, [p.name]: !shown })}>
+                        {shown ? `PIN: ${pin}` : "SHOW PIN"}
                       </button>
-                      <input style={{ ...S.input, width: 70, padding: "6px 8px", fontSize: 12 }}
+                      <input style={{ ...S.input, width: 80, padding: "6px 10px", fontSize: 13 }}
                         type="number" placeholder="+/-"
                         value={adjustAmt[p.name] || ""}
                         onChange={e => setAdjustAmt({ ...adjustAmt, [p.name]: e.target.value })} />
-                      <button style={S.miniBtn} onClick={() => {
+                      <button style={S.btnSecondary} onClick={() => {
                         const a = parseFloat(adjustAmt[p.name]);
                         if (!isNaN(a)) { adjustBalance(p.name, a); setAdjustAmt({ ...adjustAmt, [p.name]: "" }); }
-                      }}>Adjust</button>
-                      <button style={{ ...S.miniBtn, background: "#fff1f2", borderColor: "#fecaca", color: "#ef4444" }}
-                        onClick={() => { if (window.confirm(`Delete ${p.name}?`)) deleteUser(p.name); }}>Delete</button>
+                      }}>ADJUST</button>
+                      <button style={S.btnAccent}
+                        onClick={() => { if (window.confirm(`Delete ${p.name}?`)) deleteUser(p.name); }}>DELETE</button>
                     </div>
                   </div>
                 );
@@ -958,8 +968,8 @@ export default function App() {
                 <label style={S.formLabel}>TYPE</label>
                 <div style={{ display: "flex", gap: 8 }}>
                   {["game", "future"].map(t => (
-                    <button key={t} style={{ ...S.miniBtn, ...(addType === t ? { background: "#0f172a", color: "#f8fafc", borderColor: "#0f172a" } : {}) }}
-                      onClick={() => setAddType(t)}>{t}</button>
+                    <button key={t} style={{ ...S.btnSecondary, ...(addType === t ? { background: C.ink, color: "#fff", borderColor: C.ink } : {}) }}
+                      onClick={() => setAddType(t)}>{t.toUpperCase()}</button>
                   ))}
                 </div>
               </div>
@@ -979,26 +989,26 @@ export default function App() {
                       onChange={e => { const a = [...addOpts]; a[i] = { ...a[i], label: e.target.value }; setAddOpts(a); }} />
                     <input style={{ ...S.input, flex: 1 }} placeholder="-110" type="number" value={opt.odds}
                       onChange={e => { const a = [...addOpts]; a[i] = { ...a[i], odds: e.target.value }; setAddOpts(a); }} />
-                    {addOpts.length > 2 && <button style={S.miniBtn} onClick={() => setAddOpts(addOpts.filter((_, j) => j !== i))}>X</button>}
+                    {addOpts.length > 2 && <button style={S.btnSecondary} onClick={() => setAddOpts(addOpts.filter((_, j) => j !== i))}>X</button>}
                   </div>
                 ))}
-                <button style={S.miniBtn} onClick={() => setAddOpts([...addOpts, { label: "", odds: "" }])}>+ Add Option</button>
+                <button style={S.btnSecondary} onClick={() => setAddOpts([...addOpts, { label: "", odds: "" }])}>+ ADD OPTION</button>
               </div>
 
               {addType === "game" && (<>
                 <div style={S.formRow}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.ink, fontWeight: 700 }}>
                     <input type="checkbox" checked={addSpread.enabled} onChange={e => setAddSpread({ ...addSpread, enabled: e.target.checked })} />
                     Add Spread Market
                   </label>
                   {addSpread.enabled && (
-                    <div style={{ marginTop: 8, padding: 10, background: "#f8fafc", borderRadius: 8 }}>
+                    <div style={{ marginTop: 8, padding: 12, background: C.rail, borderRadius: 6 }}>
                       <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
                         <select style={S.input} value={addSpread.favorite} onChange={e => setAddSpread({ ...addSpread, favorite: parseInt(e.target.value) })}>
                           <option value="0">{addOpts[0]?.label || "Option 1"} is favorite</option>
                           <option value="1">{addOpts[1]?.label || "Option 2"} is favorite</option>
                         </select>
-                        <input style={{ ...S.input, width: 70 }} placeholder="7.5" type="number" step="0.5" value={addSpread.line}
+                        <input style={{ ...S.input, width: 80 }} placeholder="7.5" type="number" step="0.5" value={addSpread.line}
                           onChange={e => setAddSpread({ ...addSpread, line: e.target.value })} />
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
@@ -1011,12 +1021,12 @@ export default function App() {
                   )}
                 </div>
                 <div style={S.formRow}>
-                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.ink, fontWeight: 700 }}>
                     <input type="checkbox" checked={addOU.enabled} onChange={e => setAddOU({ ...addOU, enabled: e.target.checked })} />
                     Add Over/Under Market
                   </label>
                   {addOU.enabled && (
-                    <div style={{ marginTop: 8, padding: 10, background: "#f8fafc", borderRadius: 8 }}>
+                    <div style={{ marginTop: 8, padding: 12, background: C.rail, borderRadius: 6 }}>
                       <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
                         <input style={S.input} placeholder="O/U line (7.5)" type="number" step="0.5" value={addOU.line}
                           onChange={e => setAddOU({ ...addOU, line: e.target.value })} />
@@ -1036,29 +1046,29 @@ export default function App() {
                 <label style={S.formLabel}>MAX BET (optional)</label>
                 <input style={S.input} type="number" placeholder="e.g., 100" value={addMaxBet} onChange={e => setAddMaxBet(e.target.value)} />
               </div>
-              <button style={{ ...S.btnPrimary, width: "100%" }} onClick={handleAddMarket}>Add Market</button>
+              <button style={{ ...S.btnPrimary, width: "100%" }} onClick={handleAddMarket}>+ CREATE EVENT</button>
 
-              <div style={{ marginTop: 24, padding: 14, background: "#f8fafc", borderRadius: 10 }}>
-                <h4 style={{ margin: "0 0 8px", fontSize: 13 }}>Site Settings</h4>
+              <div style={{ marginTop: 24, padding: 16, background: C.rail, borderRadius: 6 }}>
+                <h4 style={{ margin: "0 0 10px", fontSize: 13, color: C.ink, fontWeight: 800, letterSpacing: -0.2 }}>Site Settings</h4>
                 <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                   <input style={S.input} type="number" placeholder="Site-wide max bet" value={siteMaxInput} onChange={e => setSiteMaxInput(e.target.value)} />
-                  <button style={S.miniBtn} onClick={async () => {
+                  <button style={S.btnSecondary} onClick={async () => {
                     const v = parseFloat(siteMaxInput);
                     await storageSet("mln_site_max_bet", isNaN(v) ? null : v);
                     setSiteMaxBet(isNaN(v) ? null : v); setSiteMaxInput("");
                     notify("Site max bet updated");
-                  }}>Set</button>
-                  <button style={S.miniBtn} onClick={async () => {
+                  }}>SET</button>
+                  <button style={S.btnSecondary} onClick={async () => {
                     await storageSet("mln_site_max_bet", null); setSiteMaxBet(null); notify("Cleared");
-                  }}>Clear</button>
+                  }}>CLEAR</button>
                 </div>
-                <div style={{ fontSize: 11, color: "#64748b", marginBottom: 8 }}>Current: {siteMaxBet ? `$${siteMaxBet}` : "none"}</div>
-                <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                <div style={{ fontSize: 13, color: C.sub, marginBottom: 10, ...TAB }}>Current: {siteMaxBet ? `$${siteMaxBet}` : "none"}</div>
+                <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
                   <input style={S.input} placeholder="Lobby banner message" value={headerInput} onChange={e => setHeaderInput(e.target.value)} />
-                  <button style={S.miniBtn} onClick={async () => { await storageSet("mln_header_msg", headerInput); setHeaderMsg(headerInput); setHeaderInput(""); notify("Banner updated"); }}>Set</button>
-                  <button style={S.miniBtn} onClick={async () => { await storageSet("mln_header_msg", ""); setHeaderMsg(""); notify("Cleared"); }}>Clear</button>
+                  <button style={S.btnSecondary} onClick={async () => { await storageSet("mln_header_msg", headerInput); setHeaderMsg(headerInput); setHeaderInput(""); notify("Banner updated"); }}>SET</button>
+                  <button style={S.btnSecondary} onClick={async () => { await storageSet("mln_header_msg", ""); setHeaderMsg(""); notify("Cleared"); }}>CLEAR</button>
                 </div>
-                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 12 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: C.ink2, fontWeight: 500 }}>
                   <input type="checkbox" checked={leaderboardVisible} onChange={async e => {
                     setLeaderboardVisible(e.target.checked);
                     await storageSet("mln_leaderboard_visible", e.target.checked);
@@ -1073,39 +1083,39 @@ export default function App() {
             <div>
               <h3 style={S.adminH3}>Edit Markets</h3>
               {allMarkets.map(m => (
-                <div key={m.id} style={S.adminMarketCard}>
-                  <p style={S.adminMarketTitle}>{m.title}</p>
-                  <p style={S.adminMarketSubtitle}>{m.subtitle} - <span style={{ color: m.status === "open" ? "#16a34a" : m.status === "paused" ? "#d97706" : "#94a3b8" }}>{m.status}</span></p>
+                <div key={m.id} style={S.adminCard}>
+                  <p style={S.adminCardTitle}>{m.title}</p>
+                  <p style={S.adminCardSub}>{m.subtitle} — <span style={{ color: m.status === "open" ? C.pos : m.status === "paused" ? C.gold : C.sub, fontWeight: 700 }}>{m.status}</span></p>
                   <div style={{ display: "flex", gap: 6, marginTop: 8, marginBottom: 8, flexWrap: "wrap" }}>
-                    <input style={{ ...S.input, width: 100 }} type="number" placeholder="Max bet"
+                    <input style={{ ...S.input, width: 110 }} type="number" placeholder="Max bet"
                       value={editMaxBets[m.id] !== undefined ? editMaxBets[m.id] : (m.maxBet || "")}
                       onChange={e => setEditMaxBets({ ...editMaxBets, [m.id]: e.target.value })} />
-                    <button style={S.miniBtn} onClick={() => {
+                    <button style={S.btnSecondary} onClick={() => {
                       const v = parseFloat(editMaxBets[m.id]);
                       updateMarketMaxBet(m.id, isNaN(v) ? null : v);
                       const ne = { ...editMaxBets }; delete ne[m.id]; setEditMaxBets(ne);
-                    }}>Set Max</button>
-                    <button style={S.miniBtn} onClick={() => togglePauseMarket(m.id)}>
-                      {m.status === "paused" ? "Reopen" : "Pause"}
+                    }}>SET MAX</button>
+                    <button style={S.btnSecondary} onClick={() => togglePauseMarket(m.id)}>
+                      {m.status === "paused" ? "REOPEN" : "PAUSE"}
                     </button>
                   </div>
                   <div>
                     {(m.options || []).map(o => (
                       <div key={o.id} style={{ display: "flex", gap: 6, marginBottom: 4, alignItems: "center" }}>
-                        <span style={{ flex: 1, fontSize: 12 }}>{o.label}</span>
-                        <input style={{ ...S.input, width: 80 }} type="number"
+                        <span style={{ flex: 1, fontSize: 13, color: C.ink2 }}>{o.label}</span>
+                        <input style={{ ...S.input, width: 90 }} type="number"
                           value={editOdds[o.id] !== undefined ? editOdds[o.id] : o.odds}
                           onChange={e => setEditOdds({ ...editOdds, [o.id]: e.target.value })} />
-                        <button style={S.miniBtn} onClick={() => {
+                        <button style={S.btnSecondary} onClick={() => {
                           const v = parseInt(editOdds[o.id]);
                           if (!isNaN(v)) { updateOptionOdds(m.id, o.id, v); const ne = { ...editOdds }; delete ne[o.id]; setEditOdds(ne); }
-                        }}>Set</button>
+                        }}>SET</button>
                       </div>
                     ))}
                   </div>
-                  <button style={{ ...S.miniBtn, marginTop: 6, background: "#fff1f2", borderColor: "#fecaca", color: "#ef4444" }}
+                  <button style={{ ...S.btnAccent, marginTop: 8 }}
                     onClick={() => { if (window.confirm(`Delete "${m.title}"? Pending stakes refunded.`)) deleteMarket(m.id); }}>
-                    Delete Market
+                    DELETE MARKET
                   </button>
                 </div>
               ))}
@@ -1116,20 +1126,20 @@ export default function App() {
             <div>
               <h3 style={S.adminH3}>All Bets ({bets.length})</h3>
               {[...bets].reverse().map(b => (
-                <div key={b.id} style={{ padding: "10px 12px", background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, marginBottom: 8 }}>
+                <div key={b.id} style={S.adminCard}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                    <span style={{ fontWeight: 700, fontSize: 13 }}>{b.username}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: b.status === "won" ? "#16a34a" : b.status === "lost" ? "#ef4444" : b.status === "pushed" ? "#3b82f6" : "#d97706" }}>
+                    <span style={{ fontWeight: 800, fontSize: 14, color: C.ink, letterSpacing: -0.2 }}>{b.username}</span>
+                    <span style={{ ...S.eyebrow, color: b.status === "won" ? C.pos : b.status === "lost" ? C.accent : b.status === "pushed" ? C.catSports : C.gold }}>
                       {b.status === "won" ? `${I.check} WON` : b.status === "lost" ? `${I.cross} LOST` : b.status === "pushed" ? `${I.undo} PUSH` : `${I.pending} PENDING`}
                     </span>
                   </div>
-                  <div style={{ fontSize: 12, color: "#64748b" }}>
+                  <div style={{ fontSize: 13, color: C.ink2 }}>
                     {b.betType === "straight"
                       ? `${b.optionLabel} (${fmt(b.odds)}) on ${b.marketTitle}`
                       : `${(b.legs || []).length}-leg parlay (${fmt(b.combinedOdds)})`}
                   </div>
-                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>
-                    ${b.stake.toFixed(2)} {I.arrow} ${b.payout?.toFixed(2)} - {fmtTime(b.placedAt)}
+                  <div style={{ ...TAB, fontSize: 13, color: C.sub, marginTop: 4 }}>
+                    ${b.stake.toFixed(2)} {I.arrow} ${b.payout?.toFixed(2)} {I.bullet} {fmtTime(b.placedAt)}
                   </div>
                 </div>
               ))}
@@ -1139,7 +1149,7 @@ export default function App() {
           {adminTab === "danger" && (
             <div>
               <h3 style={S.adminH3}>Danger Zone</h3>
-              <button style={{ ...S.btnPrimary, background: "#dc2626", width: "100%" }} onClick={async () => {
+              <button style={{ ...S.btnAccent, width: "100%", padding: "14px 18px", fontSize: 13 }} onClick={async () => {
                 if (!window.confirm("Reset EVERYTHING? This deletes all users, markets, and bets.")) return;
                 if (!window.confirm("Really? This cannot be undone.")) return;
                 await storageSet("mln_users", {}); setUsers({});
@@ -1156,408 +1166,488 @@ export default function App() {
   }
 
   // ── LOBBY ──
+  const lifetime = getUserLifetimePnL(username);
+
+  const navItems = [
+    { k: "games", l: "Games", dot: C.catSports, n: rawGames.filter(m => m.status === "open" || m.status === "paused").length },
+    { k: "futures", l: "Futures", dot: C.catMadeup, n: rawFutures.filter(m => m.status === "open" || m.status === "paused").length },
+    leaderboardVisible ? { k: "leaderboard", l: "Standings", dot: C.gold } : null,
+    { k: "mybets", l: "My Bets", dot: C.accent, n: userBets.length },
+  ].filter(Boolean);
+
   return (
-    <div style={S.wrap}>
-      <div style={S.header}>
-        <div style={S.headerLeft}><span style={S.headerIcon}>{I.baseball}</span><span style={S.headerLogo}>MLN BETTING</span></div>
-        <div style={S.headerRight}>
-          <div style={S.balancePill}><span style={S.balanceDollar}>$</span><span style={S.balanceAmt}>{balance.toFixed(2)}</span></div>
-          <button style={S.avatarBtn} title={username} onClick={() => { setBetSlip({}); setScreen("login"); }}>{username[0]?.toUpperCase()}</button>
+    <div style={S.lobbyWrap}>
+      {/* SIDEBAR */}
+      <aside style={S.sidebar}>
+        <div style={S.brandRow}>
+          <div style={S.brandBlock} />
+          <div style={S.brandText}>BOOKD</div>
         </div>
-      </div>
 
-      {headerMsg && <div style={S.headerBanner}>{headerMsg}</div>}
-      {notification && <div style={S.notify}>{notification}</div>}
+        <div style={{ ...S.eyebrow, padding: "16px 16px 6px" }}>YOUR BETS</div>
+        {navItems.map(item => (
+          <button key={item.k} style={{ ...S.navItem, ...(activeTab === item.k ? S.navItemActive : {}) }}
+            onClick={() => setActiveTab(item.k)}>
+            <span style={{ ...S.navDot, background: activeTab === item.k ? item.dot : C.sub }} />
+            <span style={S.navLabel}>{item.l}</span>
+            {item.n > 0 && <span style={S.navCount}>{item.n}</span>}
+          </button>
+        ))}
 
-      <div style={S.tabs}>
-        {[["games", `${I.stadium} Games`], ["futures", `${I.crystal} Futures`], ["leaderboard", `${I.medal} Standings`], ["mybets", `My Bets${userBets.length ? ` (${userBets.length})` : ""}`]]
-          .filter(([k]) => k !== "leaderboard" || leaderboardVisible)
-          .map(([k, l]) => (
-            <button key={k} style={{ ...S.tab, ...(activeTab === k ? S.tabActive : {}) }} onClick={() => setActiveTab(k)}>{l}</button>
-          ))}
-      </div>
+        <div style={{ ...S.eyebrow, padding: "20px 16px 6px" }}>CATEGORIES</div>
+        {[["Lunar", C.catSports], ["Galactic", C.catPop], ["ToOS", C.catMadeup]].map(([l, c]) => (
+          <div key={l} style={S.navItem}>
+            <span style={{ ...S.catSquare, background: c }} />
+            <span style={S.navLabel}>{l}</span>
+          </div>
+        ))}
 
-      {(activeTab === "games" || activeTab === "futures") && (
-        <div style={S.subTabs}>
-          {[["open", "Open"], ["resolved", "Resolved"]].map(([k, l]) => {
-            const src = activeTab === "games" ? rawGames : rawFutures;
-            const cnt = k === "open" ? src.filter(m => m.status === "open" || m.status === "paused").length : src.filter(m => m.status === "settled").length;
-            return (
-              <button key={k} style={{ ...S.subTab, ...(gamesFilter === k ? S.subTabActive : {}) }} onClick={() => setGamesFilter(k)}>
-                {l}{cnt > 0 ? ` (${cnt})` : ""}
-              </button>
-            );
-          })}
+        <div style={S.sidebarSpacer} />
+
+        <div style={S.balanceCard}>
+          <div style={{ height: 3, background: `linear-gradient(90deg, ${C.accent}, ${C.gold})`, marginLeft: -14, marginRight: -14, marginTop: -12, marginBottom: 10 }} />
+          <div style={S.balanceLabel}>BALANCE</div>
+          <div style={S.balanceAmt}>${balance.toFixed(2)}</div>
+          {lifetime !== 0 && (
+            <div style={{ fontSize: 11, color: lifetime >= 0 ? C.pos : C.accent, fontWeight: 600, ...TAB, marginTop: 2 }}>
+              {lifetime >= 0 ? "↑ +" : "↓ "}${Math.abs(lifetime).toFixed(0)} lifetime
+            </div>
+          )}
+          <button style={{ ...S.btnGhost, fontSize: 11, padding: "8px 0 0", display: "block" }} onClick={() => { setBetSlip({}); setScreen("login"); }}>
+            sign out · {username}
+          </button>
         </div>
-      )}
+      </aside>
 
-      <div style={S.content}>
+      {/* MAIN */}
+      <main style={S.main}>
+        {/* TOPBAR */}
+        <div style={S.topbar}>
+          <div style={S.topbarLeft}>
+            {headerMsg && <div style={S.bannerChip}>{I.dot} {headerMsg}</div>}
+          </div>
+          <div style={S.topbarRight}>
+            {(activeTab === "games" || activeTab === "futures") && (
+              <div style={S.segmented}>
+                {[["open", "Open"], ["resolved", "Resolved"]].map(([k, l]) => {
+                  const src = activeTab === "games" ? rawGames : rawFutures;
+                  const cnt = k === "open" ? src.filter(m => m.status === "open" || m.status === "paused").length : src.filter(m => m.status === "settled").length;
+                  return (
+                    <button key={k} style={{ ...S.segBtn, ...(gamesFilter === k ? S.segBtnActive : {}) }} onClick={() => setGamesFilter(k)}>
+                      {l}{cnt > 0 ? ` · ${cnt}` : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
 
-        {(activeTab === "games" || activeTab === "futures") && (
-          <>
-            {displayMarkets.length === 0 && <div style={S.empty}><p style={S.emptyText}>No {gamesFilter} markets.</p></div>}
+        {notification && <div style={S.notify}>{notification}</div>}
 
-            {/* FUTURES */}
-            {activeTab === "futures" && displayMarkets.map(market => {
-              const meta = leagueMeta(market.subtitle);
-              const totalMkt = (market.options || []).reduce((s, o) => s + (optionTotals[o.id] || 0), 0);
-              return (
-                <div key={market.id} style={S.marketCard}>
-                  <div style={S.marketTop}>
-                    <span style={{ ...S.leagueTag, color: meta.color, background: meta.bg }}>{meta.tag}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {market.maxBet && <span style={S.maxBetTag}>Max ${market.maxBet}</span>}
-                      {market.status === "paused" && <span style={{ ...S.maxBetTag, color: "#d97706", background: "#fffbeb" }}>PAUSED</span>}
-                      {market.status === "settled" && <span style={{ ...S.maxBetTag, color: "#16a34a", background: "#f0fdf4" }}>SETTLED</span>}
-                    </div>
-                  </div>
-                  <h3 style={S.marketTitle}>{market.title}</h3>
-                  <p style={S.marketSubtitle}>{market.subtitle}</p>
-                  {market.status === "settled" && (
-                    <div style={S.winnerBar}>
-                      {market.winner === "push" ? `${I.undo} Push - bets refunded` : `${I.trophy} ${(market.options || []).find(o => o.id === market.winner)?.label || "Unknown"} wins`}
-                    </div>
-                  )}
-                  <div style={S.futureGrid}>
-                    {(market.options || []).map(opt => {
-                      const isElim = (market.eliminated || []).includes(opt.id);
-                      const sel = !!betSlip[opt.id];
-                      const dis = market.status !== "open" || isElim;
-                      const totalOnOpt = optionTotals[opt.id] || 0;
-                      const pct = totalMkt > 0 ? (totalOnOpt / totalMkt) * 100 : 0;
-                      return (
-                        <div key={opt.id} style={{ ...S.futOpt, ...(sel ? S.futOptSel : {}), ...(dis ? S.futOptDis : {}) }}
-                          onClick={() => !dis && toggleSlip(opt, market.id, market)}>
-                          <span style={S.futOptLabel}>{isElim ? `${I.cross} ${opt.label}` : opt.label}</span>
-                          <span style={{ ...S.futOptOdds, color: sel ? "#f8fafc" : opt.odds > 0 ? "#4ade80" : "#f8fafc" }}>{fmt(opt.odds)}</span>
-                          {totalMkt > 0 && <div style={S.futOptBar}><div style={{ ...S.futOptBarFill, width: `${pct}%` }} /></div>}
-                        </div>
-                      );
-                    })}
-                  </div>
+        {/* CONTENT */}
+        <div style={S.content}>
+
+          {(activeTab === "games" || activeTab === "futures") && (
+            <>
+              {displayMarkets.length === 0 && (
+                <div style={S.empty}>
+                  <div style={{ fontSize: 16, color: C.ink2, fontWeight: 700, marginBottom: 4, letterSpacing: -0.3 }}>No {gamesFilter} markets</div>
+                  <div style={{ fontSize: 13, color: C.sub }}>{gamesFilter === "open" ? "Check back soon for new events." : "Settled markets will appear here."}</div>
                 </div>
-              );
-            })}
+              )}
 
-            {/* GAMES (grouped: ML + Spread + O/U) */}
-            {activeTab === "games" && (() => {
-              const grouped = [];
-              const used = new Set();
-              for (const m of displayMarkets) {
-                if (used.has(m.id)) continue;
-                const baseTitle = (m.title || "").replace(/ - Spread$/, "").replace(/ - O\/U [\d.]+$/, "");
-                const isBase = m.title === baseTitle;
-                if (!isBase) continue;
-                const sp = displayMarkets.find(x => x.title === `${baseTitle} - Spread`);
-                const ou = displayMarkets.find(x => (x.title || "").startsWith(`${baseTitle} - O/U`));
-                [m.id, sp?.id, ou?.id].filter(Boolean).forEach(id => used.add(id));
-                grouped.push({ ml: m, sp: sp || null, ou: ou || null });
-              }
-              for (const m of displayMarkets) {
-                if (!used.has(m.id)) { grouped.push({ ml: m, sp: null, ou: null }); used.add(m.id); }
-              }
-
-              return grouped.map(({ ml, sp, ou }) => {
-                const meta = leagueMeta(ml.subtitle);
-                const allMkts = [ml, sp, ou].filter(Boolean);
-                const anyPaused = allMkts.some(m => m.status === "paused");
-                const allSettled = allMkts.every(m => m.status === "settled");
-                const totalAction = allMkts.reduce((s, m) => s + (m.options || []).reduce((ss, o) => ss + (optionTotals[o.id] || 0), 0), 0);
-                const hasSpread = !!sp, hasOU = !!ou;
-
+              {/* FUTURES */}
+              {activeTab === "futures" && displayMarkets.map(market => {
+                const meta = leagueMeta(market.subtitle);
+                const totalMkt = (market.options || []).reduce((s, o) => s + (optionTotals[o.id] || 0), 0);
                 return (
-                  <div key={ml.id} style={S.marketCard}>
-                    <div style={S.marketTop}>
-                      <span style={{ ...S.leagueTag, color: meta.color, background: meta.bg }}>{meta.tag}</span>
+                  <div key={market.id} style={S.eventCard}>
+                    <div style={{ height: 4, background: meta.color, marginLeft: -16, marginRight: -16, marginTop: -16, marginBottom: 12 }} />
+                    <div style={S.eventTop}>
+                      <span style={{ ...S.catBadge, background: meta.color }}>{meta.tag}</span>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        {ml.maxBet && <span style={S.maxBetTag}>Max ${ml.maxBet}</span>}
-                        {anyPaused && <span style={{ ...S.maxBetTag, color: "#d97706", background: "#fffbeb" }}>PAUSED</span>}
-                        {allSettled && <span style={{ ...S.maxBetTag, color: "#16a34a", background: "#f0fdf4" }}>SETTLED</span>}
+                        {market.maxBet && <span style={S.metaChip}>max ${market.maxBet}</span>}
+                        {market.status === "paused" && <span style={{ ...S.metaChip, color: C.gold, background: "rgba(255,184,0,0.10)" }}>PAUSED</span>}
+                        {market.status === "settled" && <span style={{ ...S.metaChip, color: C.pos, background: "rgba(21,163,90,0.10)" }}>SETTLED</span>}
                       </div>
                     </div>
-                    <h3 style={S.marketTitle}>{ml.title}</h3>
-                    <p style={S.marketSubtitle}>{ml.subtitle}{totalAction > 0 && ` ${I.bullet} $${totalAction.toFixed(0)} action`}</p>
-                    {ml.status === "settled" && (
-                      <div style={GS.winnerBar}>
-                        {ml.winner === "push" ? `${I.undo} Push - bets refunded` : `${I.trophy} ${(ml.options || []).find(o => o.id === ml.winner)?.label || "Unknown"} wins`}
+                    <h3 style={S.eventTitle}>{market.title}</h3>
+                    <p style={S.eventSub}>{market.subtitle}{totalMkt > 0 && <> {I.bullet} <span style={TAB}>${totalMkt.toFixed(0)}</span> in</>}</p>
+                    {market.status === "settled" && (
+                      <div style={S.winnerBar}>
+                        {market.winner === "push" ? `${I.undo} Push — bets refunded` : `${I.check} ${(market.options || []).find(o => o.id === market.winner)?.label || "Unknown"} wins`}
                       </div>
                     )}
-
-                    {/* Grouped grid: ML first, then Spread, then O/U */}
-                    <div style={GS.gridWrap}>
-                      <div style={GS.headerRow}>
-                        <div style={GS.colHeader}>MONEYLINE</div>
-                        {hasSpread && <div style={GS.colHeader}>SPREAD</div>}
-                        {hasOU && <div style={GS.colHeader}>O/U</div>}
-                      </div>
-                      <div style={GS.row}>
-                        {renderCell((ml.options || [])[0], ml, "ml")}
-                        {hasSpread && renderCell((sp.options || [])[0], sp, "spread")}
-                        {hasOU && renderCell((ou.options || [])[0], ou, "ou")}
-                      </div>
-                      <div style={GS.row}>
-                        {renderCell((ml.options || [])[1], ml, "ml")}
-                        {hasSpread && renderCell((sp.options || [])[1], sp, "spread")}
-                        {hasOU && renderCell((ou.options || [])[1], ou, "ou")}
-                      </div>
+                    <div style={S.futureGrid}>
+                      {(market.options || []).map(opt => {
+                        const isElim = (market.eliminated || []).includes(opt.id);
+                        const sel = !!betSlip[opt.id];
+                        const dis = market.status !== "open" || isElim;
+                        const userHasBet = bets.some(b => b.username === username && (
+                          (b.betType === "straight" && b.optionId === opt.id) ||
+                          (b.betType === "parlay" && (b.legs || []).some(l => l.optionId === opt.id))
+                        ));
+                        const totalOnOpt = optionTotals[opt.id] || 0;
+                        const pct = totalMkt > 0 ? (totalOnOpt / totalMkt) * 100 : 0;
+                        const isHot = totalMkt > 0 && totalOnOpt / totalMkt > 0.5;
+                        return (
+                          <div key={opt.id} style={{
+                            ...S.futOpt,
+                            ...(userHasBet ? { background: C.tilePos, borderColor: C.linePos } : {}),
+                            ...(isHot && !userHasBet && !sel ? { background: C.tileHot, borderColor: C.lineAccent } : {}),
+                            ...(sel ? { background: C.ink, borderColor: C.ink } : {}),
+                            ...(dis ? { opacity: 0.4, cursor: "not-allowed" } : {}),
+                          }} onClick={() => !dis && toggleSlip(opt, market.id, market)}>
+                            <span style={{ ...S.futOptLabel, color: sel ? "rgba(255,255,255,0.7)" : C.sub }}>{isElim ? `OUT — ${opt.label}` : opt.label}</span>
+                            <span style={{ ...S.futOptOdds, color: sel ? "#fff" : isHot && !userHasBet ? C.accent : userHasBet ? C.pos : opt.odds > 0 ? C.pos : C.ink }}>{fmt(opt.odds)}</span>
+                            {totalMkt > 0 && <div style={S.futOptBar}><div style={{ ...S.futOptBarFill, width: `${pct}%`, background: sel ? "rgba(255,255,255,0.4)" : isHot ? C.accent : C.ink2 }} /></div>}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
-              });
-            })()}
-          </>
-        )}
+              })}
 
-        {/* STANDINGS */}
-        {activeTab === "leaderboard" && leaderboardVisible && (
-          <div>
-            {leaderboard.map(p => {
-              const lifetime = getUserLifetimePnL(p.name);
-              return (
-                <div key={p.name} style={{ ...S.boardRow, ...(p.name === username ? S.boardRowMe : {}) }}>
-                  <span style={S.boardRank}>#{p._rank}</span>
-                  <span style={S.boardName}>{p.name}{p.name === username && " (you)"}</span>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                    <span style={S.boardTotal}>${p.total.toFixed(0)}</span>
-                    <span style={{ fontSize: 10, color: lifetime >= 0 ? "#4ade80" : "#f87171" }}>
-                      {lifetime >= 0 ? "+" : ""}${lifetime.toFixed(0)} lifetime
+              {/* GAMES — grouped event rows */}
+              {activeTab === "games" && (() => {
+                const grouped = [];
+                const used = new Set();
+                for (const m of displayMarkets) {
+                  if (used.has(m.id)) continue;
+                  const baseTitle = (m.title || "").replace(/ - Spread$/, "").replace(/ - O\/U [\d.]+$/, "");
+                  const isBase = m.title === baseTitle;
+                  if (!isBase) continue;
+                  const sp = displayMarkets.find(x => x.title === `${baseTitle} - Spread`);
+                  const ou = displayMarkets.find(x => (x.title || "").startsWith(`${baseTitle} - O/U`));
+                  [m.id, sp?.id, ou?.id].filter(Boolean).forEach(id => used.add(id));
+                  grouped.push({ ml: m, sp: sp || null, ou: ou || null });
+                }
+                for (const m of displayMarkets) {
+                  if (!used.has(m.id)) { grouped.push({ ml: m, sp: null, ou: null }); used.add(m.id); }
+                }
+
+                return grouped.map(({ ml, sp, ou }) => {
+                  const meta = leagueMeta(ml.subtitle);
+                  const allMkts = [ml, sp, ou].filter(Boolean);
+                  const anyPaused = allMkts.some(m => m.status === "paused");
+                  const allSettled = allMkts.every(m => m.status === "settled");
+                  const totalAction = allMkts.reduce((s, m) => s + (m.options || []).reduce((ss, o) => ss + (optionTotals[o.id] || 0), 0), 0);
+                  const hasSpread = !!sp, hasOU = !!ou;
+                  const opts = ml.options || [];
+
+                  return (
+                    <div key={ml.id} style={S.eventCard}>
+                      <div style={{ height: 4, background: meta.color, marginLeft: -16, marginRight: -16, marginTop: -16, marginBottom: 12 }} />
+                      <div style={S.eventTop}>
+                        <span style={{ ...S.catBadge, background: meta.color }}>{meta.tag}</span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          {ml.maxBet && <span style={S.metaChip}>max ${ml.maxBet}</span>}
+                          {anyPaused && <span style={{ ...S.metaChip, color: C.gold, background: "rgba(255,184,0,0.10)" }}>PAUSED</span>}
+                          {allSettled && <span style={{ ...S.metaChip, color: C.pos, background: "rgba(21,163,90,0.10)" }}>SETTLED</span>}
+                        </div>
+                      </div>
+
+                      <h3 style={S.eventTitle}>{ml.title}</h3>
+                      <p style={S.eventSub}>{ml.subtitle}{totalAction > 0 && <> {I.bullet} <span style={TAB}>${totalAction.toFixed(0)}</span> in</>}</p>
+
+                      {/* Team chips */}
+                      <div style={{ display: "flex", gap: 16, marginBottom: 12, flexWrap: "wrap" }}>
+                        {opts[0] && <div style={S.teamRow}>{teamChip(opts[0].label, meta.color)}<span style={S.teamName}>{opts[0].label}</span></div>}
+                        {opts[1] && <div style={S.teamRow}>{teamChip(opts[1].label, C.ink2)}<span style={S.teamName}>{opts[1].label}</span></div>}
+                      </div>
+
+                      {ml.status === "settled" && (
+                        <div style={S.winnerBar}>
+                          {ml.winner === "push" ? `${I.undo} Push — bets refunded` : `${I.check} ${(opts).find(o => o.id === ml.winner)?.label || "Unknown"} wins`}
+                        </div>
+                      )}
+
+                      {/* Tile grid: ML | Spread | O/U */}
+                      <div style={GS.gridWrap}>
+                        <div style={GS.headerRow}>
+                          <div style={GS.colHeader}>MONEYLINE</div>
+                          {hasSpread && <div style={GS.colHeader}>SPREAD</div>}
+                          {hasOU && <div style={GS.colHeader}>O/U</div>}
+                        </div>
+                        <div style={GS.row}>
+                          {renderCell(opts[0], ml)}
+                          {hasSpread && renderCell((sp.options || [])[0], sp)}
+                          {hasOU && renderCell((ou.options || [])[0], ou)}
+                        </div>
+                        <div style={GS.row}>
+                          {renderCell(opts[1], ml)}
+                          {hasSpread && renderCell((sp.options || [])[1], sp)}
+                          {hasOU && renderCell((ou.options || [])[1], ou)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+            </>
+          )}
+
+          {/* STANDINGS */}
+          {activeTab === "leaderboard" && leaderboardVisible && (
+            <div>
+              <div style={S.sectionHeader}>STANDINGS</div>
+              {leaderboard.map(p => {
+                const lf = getUserLifetimePnL(p.name);
+                return (
+                  <div key={p.name} style={{ ...S.boardRow, ...(p.name === username ? S.boardRowMe : {}) }}>
+                    <span style={S.boardRank}>#{p._rank}</span>
+                    <span style={S.boardName}>{p.name}{p.name === username && " (you)"}</span>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                      <span style={S.boardTotal}>${p.total.toFixed(0)}</span>
+                      <span style={{ fontSize: 11, color: lf >= 0 ? C.pos : C.accent, fontWeight: 600, ...TAB }}>
+                        {lf >= 0 ? "+" : ""}${lf.toFixed(0)} lifetime
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* MY BETS */}
+          {activeTab === "mybets" && (
+            <div>
+              <div style={S.sectionHeader}>MY BETS</div>
+              {userBets.length === 0 && (
+                <div style={S.empty}>
+                  <div style={{ fontSize: 16, color: C.ink2, fontWeight: 700, marginBottom: 4, letterSpacing: -0.3 }}>No bets yet</div>
+                  <div style={{ fontSize: 13, color: C.sub }}>Tap any odds tile to start a slip.</div>
+                </div>
+              )}
+              {[...userBets].reverse().map(b => (
+                <div key={b.id} style={S.betCard}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <span style={{ ...S.eyebrow, color: b.betType === "parlay" ? C.catPop : C.catSports }}>
+                      {b.betType === "parlay" ? `${(b.legs || []).length}-LEG PARLAY` : "STRAIGHT"}
+                    </span>
+                    <span style={{ ...S.eyebrow, color: b.status === "won" ? C.pos : b.status === "lost" ? C.accent : b.status === "pushed" ? C.catSports : C.gold }}>
+                      {b.status === "won" ? `${I.check} WON` : b.status === "lost" ? `${I.cross} LOST` : b.status === "pushed" ? `${I.undo} PUSH` : `${I.pending} PENDING`}
                     </span>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* MY BETS */}
-        {activeTab === "mybets" && (
-          <div>
-            {userBets.length === 0 && <div style={S.empty}><p style={S.emptyText}>No bets yet.</p></div>}
-            {[...userBets].reverse().map(b => (
-              <div key={b.id} style={S.betCard}>
-                <div style={S.betCardTop}>
-                  <span style={{ ...S.betType, color: b.betType === "parlay" ? "#a78bfa" : "#60a5fa" }}>
-                    {b.betType === "parlay" ? `${(b.legs || []).length}-LEG PARLAY` : "STRAIGHT"}
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: b.status === "won" ? "#4ade80" : b.status === "lost" ? "#f87171" : b.status === "pushed" ? "#60a5fa" : "#fbbf24" }}>
-                    {b.status === "won" ? `${I.check} WON` : b.status === "lost" ? `${I.cross} LOST` : b.status === "pushed" ? `${I.undo} PUSH` : `${I.pending} PENDING`}
-                  </span>
-                </div>
-                {b.betType === "straight" ? (
-                  <>
-                    <p style={S.betLine}><strong>{b.optionLabel}</strong> ({fmt(b.odds)})</p>
-                    <p style={S.betMarket}>{b.marketTitle}</p>
-                  </>
-                ) : (
-                  <div>
-                    {(b.legs || []).map((l, i) => (
-                      <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 12, color: l.status === "won" ? "#4ade80" : l.status === "lost" ? "#f87171" : l.status === "pushed" ? "#60a5fa" : "#cbd5e1" }}>
-                        <span>{l.optionLabel} ({fmt(l.odds)})</span>
-                        <span>{l.status === "won" ? I.check : l.status === "lost" ? I.cross : l.status === "pushed" ? I.undo : I.pending}</span>
-                      </div>
-                    ))}
-                    <p style={{ ...S.betMarket, marginTop: 6 }}>Combined: {fmt(b.combinedOdds)}</p>
+                  {b.betType === "straight" ? (
+                    <>
+                      <p style={S.betLine}><strong>{b.optionLabel}</strong> <span style={TAB}>({fmt(b.odds)})</span></p>
+                      <p style={S.betMarket}>{b.marketTitle}</p>
+                    </>
+                  ) : (
+                    <div>
+                      {(b.legs || []).map((l, i) => (
+                        <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", fontSize: 13, color: l.status === "won" ? C.pos : l.status === "lost" ? C.accent : l.status === "pushed" ? C.catSports : C.ink2, fontWeight: 500 }}>
+                          <span>{l.optionLabel} <span style={{ ...TAB, color: C.sub }}>({fmt(l.odds)})</span></span>
+                          <span>{l.status === "won" ? I.check : l.status === "lost" ? I.cross : l.status === "pushed" ? I.undo : I.pending}</span>
+                        </div>
+                      ))}
+                      <p style={{ ...S.betMarket, marginTop: 6 }}>Combined: <span style={{ ...TAB, color: C.ink, fontWeight: 700 }}>{fmt(b.combinedOdds)}</span></p>
+                    </div>
+                  )}
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ color: C.ink2, ...TAB }}>${b.stake.toFixed(2)} stake</span>
+                    <span style={{ color: b.status === "won" ? C.pos : C.ink2, ...TAB }}>
+                      {b.status === "won" ? "Paid: " : "to win: "}${b.payout?.toFixed(2)}
+                    </span>
                   </div>
-                )}
-                <div style={S.betBottom}>
-                  <span style={{ color: "#cbd5e1" }}>${b.stake.toFixed(2)} stake</span>
-                  <span style={{ color: b.status === "won" ? "#4ade80" : "#cbd5e1" }}>
-                    {b.status === "won" ? "Paid: " : "To win: "}${b.payout?.toFixed(2)}
-                  </span>
+                  <div style={{ fontSize: 11, color: C.sub, marginTop: 4 }}>{fmtTime(b.placedAt)}</div>
                 </div>
-                <div style={{ fontSize: 10, color: "#64748b", marginTop: 4 }}>{fmtTime(b.placedAt)}</div>
+              ))}
+            </div>
+          )}
+
+        </div>
+      </main>
+
+      {/* BET SLIP — floating bottom-right */}
+      {slipLegs.length > 0 && (
+        <div style={S.slip}>
+          <div style={{ height: 3, background: `linear-gradient(90deg, ${C.accent}, ${C.gold})` }} />
+          <div style={S.slipInner}>
+            <div style={S.slipHeader}>
+              <span style={{ ...S.eyebrow, color: C.ink }}>SLIP {I.bullet} {slipLegs.length}</span>
+              <button style={S.btnGhost} onClick={() => { setBetSlip({}); setParlayStake(""); }}>clear</button>
+            </div>
+            {slipLegs.map(l => (
+              <div key={l.optionId} style={S.slipLeg}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: -0.2 }}>{l.optionLabel}</div>
+                  <div style={{ fontSize: 11, color: C.sub, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}><span style={TAB}>{fmt(l.odds)}</span> {I.bullet} {l.marketTitle}</div>
+                </div>
+                <input type="number" placeholder="$" style={S.slipStake}
+                  value={l.stake} onChange={e => setSlipStake(l.optionId, e.target.value)} />
+                <button style={S.slipX} onClick={() => { const ns = { ...betSlip }; delete ns[l.optionId]; setBetSlip(ns); }}>×</button>
               </div>
             ))}
-          </div>
-        )}
-
-      </div>
-
-      {/* BET SLIP */}
-      {slipLegs.length > 0 && (
-        <div style={S.slipBar}>
-          <div style={S.slipHeader}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#f8fafc", letterSpacing: 0.5 }}>BET SLIP ({slipLegs.length})</span>
-            <button style={S.slipClear} onClick={() => { setBetSlip({}); setParlayStake(""); }}>Clear</button>
-          </div>
-          {slipLegs.map(l => (
-            <div key={l.optionId} style={S.slipLeg}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: "#f8fafc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.optionLabel}</div>
-                <div style={{ fontSize: 10, color: "#94a3b8" }}>{fmt(l.odds)} - {l.marketTitle}</div>
-              </div>
-              <input type="number" placeholder="$" style={S.slipStake}
-                value={l.stake} onChange={e => setSlipStake(l.optionId, e.target.value)} />
-              <button style={S.slipX} onClick={() => { const ns = { ...betSlip }; delete ns[l.optionId]; setBetSlip(ns); }}>X</button>
-            </div>
-          ))}
-          {hasSameGameConflict && (
-            <div style={{ padding: "8px 12px", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontSize: 11, textAlign: "center", borderRadius: 6, margin: "0 12px 8px" }}>
-              Cannot parlay Moneyline + Spread from the same game
-            </div>
-          )}
-          {slipLegs.length === 1 && (
-            <div style={S.slipFooter}>
-              <button style={S.placeBtn} onClick={() => { const l = slipLegs[0]; placeStraight(l.optionId, parseFloat(l.stake)); }}
+            {hasSameGameConflict && (
+              <div style={S.slipWarn}>Cannot parlay Moneyline + Spread from the same game</div>
+            )}
+            {slipLegs.length === 1 && (
+              <button style={{ ...S.btnPrimary, width: "100%", marginTop: 8 }} onClick={() => { const l = slipLegs[0]; placeStraight(l.optionId, parseFloat(l.stake)); }}
                 disabled={!(parseFloat(slipLegs[0]?.stake) > 0)}>
-                Place ${parseFloat(slipLegs[0]?.stake || 0).toFixed(2)} {I.arrow} ${straightPayout.toFixed(2)}
+                <span style={TAB}>PLACE ${parseFloat(slipLegs[0]?.stake || 0).toFixed(2)} {I.arrow} ${straightPayout.toFixed(2)}</span>
               </button>
-            </div>
-          )}
-          {slipLegs.length > 1 && (
-            <div style={S.slipFooter}>
-              {straightTotal > 0 && (
-                <button style={{ ...S.placeBtn, background: "#0ea5e9", marginBottom: 6 }} onClick={placeAllStraights}>
-                  Place {slipLegs.filter(l => parseFloat(l.stake) > 0).length} straights (${straightTotal.toFixed(2)})
-                </button>
-              )}
-              {parlayEligible ? (
-                <div style={{ display: "flex", gap: 6 }}>
-                  <input type="number" placeholder="Parlay stake $" style={{ ...S.slipStake, flex: 1, width: "auto", height: 40 }}
-                    value={parlayStake} onChange={e => setParlayStake(e.target.value)} />
-                  <button style={{ ...S.placeBtn, flex: 2 }} onClick={placeParlay}
-                    disabled={!(parseFloat(parlayStake) > 0)}>
-                    Parlay {parlayOdds && fmt(parlayOdds)} {I.arrow} ${parlayPayout.toFixed(2)}
+            )}
+            {slipLegs.length > 1 && (
+              <div style={{ marginTop: 8 }}>
+                {straightTotal > 0 && (
+                  <button style={{ ...S.btnSecondary, width: "100%", marginBottom: 6, padding: "10px 14px" }} onClick={placeAllStraights}>
+                    <span style={TAB}>PLACE {slipLegs.filter(l => parseFloat(l.stake) > 0).length} STRAIGHTS · ${straightTotal.toFixed(2)}</span>
                   </button>
-                </div>
-              ) : (
-                <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", padding: 6 }}>
-                  {slipHasFuture ? "Futures cannot be parlayed" : "Add legs from different games to parlay"}
-                </div>
-              )}
-            </div>
-          )}
+                )}
+                {parlayEligible ? (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <input type="number" placeholder="$ parlay" style={{ ...S.slipStake, flex: 1, width: "auto", height: 36 }}
+                      value={parlayStake} onChange={e => setParlayStake(e.target.value)} />
+                    <button style={{ ...S.btnPrimary, flex: 2 }} onClick={placeParlay}
+                      disabled={!(parseFloat(parlayStake) > 0)}>
+                      <span style={TAB}>PARLAY {parlayOdds && fmt(parlayOdds)} {I.arrow} ${parlayPayout.toFixed(2)}</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: 12, color: C.sub, textAlign: "center", padding: 8, fontWeight: 500 }}>
+                    {slipHasFuture ? "Futures cannot be parlayed" : "Add legs from different games to parlay"}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-// ── Styles ──
-const FONT = "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-const DISPLAY = "'Barlow Condensed', -apple-system, sans-serif";
-
+// ── Styles (BOOKD) ──────────────────────────────────────────────────────
 const S = {
   // Login
-  loginWrap: { minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: FONT, position: "relative" },
-  loginBg: { position: "absolute", inset: 0, background: "radial-gradient(circle at 30% 20%, rgba(99,102,241,0.05), transparent 60%), radial-gradient(circle at 70% 80%, rgba(168,85,247,0.04), transparent 60%)", pointerEvents: "none" },
-  loginCard: { position: "relative", background: "#ffffff", borderRadius: 20, padding: "32px 28px", maxWidth: 400, width: "100%", boxShadow: "0 10px 30px rgba(0,0,0,0.08)", display: "flex", flexDirection: "column", gap: 14 },
-  loginLogoRow: { display: "flex", alignItems: "center", gap: 12 },
-  loginLogoIcon: { fontSize: 28 },
-  loginLogoTitle: { fontFamily: DISPLAY, fontSize: 22, fontWeight: 900, letterSpacing: 1, color: "#0f172a" },
-  loginLogoSub: { fontSize: 12, color: "#64748b" },
-  loginDivider: { height: 1, background: "#f1f5f9", margin: "4px 0" },
-  loginLabel: { fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#64748b" },
-  input: { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 10, padding: "11px 14px", fontFamily: FONT, fontSize: 14, color: "#0f172a", outline: "none", width: "100%", boxSizing: "border-box" },
-  btnPrimary: { background: "#0f172a", color: "#f8fafc", border: "none", borderRadius: 10, padding: "12px 16px", fontFamily: FONT, fontSize: 14, fontWeight: 700, cursor: "pointer", letterSpacing: 0.3 },
-  btnGhost: { background: "transparent", color: "#64748b", border: "none", padding: "8px", fontFamily: FONT, fontSize: 12, cursor: "pointer" },
+  loginWrap: { minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: SANS },
+  loginCard: { background: C.tile, border: `1px solid ${C.line}`, borderRadius: 8, padding: 28, maxWidth: 400, width: "100%", display: "flex", flexDirection: "column", gap: 14 },
+  loginLogoRow: { display: "flex", alignItems: "center", gap: 12, marginBottom: 4 },
+  loginLogoBlock: { width: 36, height: 36, borderRadius: 4, background: `linear-gradient(135deg, ${C.accent} 0%, ${C.catSports} 100%)`, flexShrink: 0 },
+  loginLogoTitle: { fontFamily: SANS, fontSize: 22, fontWeight: 800, letterSpacing: -0.6, color: C.ink, lineHeight: 1 },
+  loginLogoSub: { fontSize: 13, color: C.sub, fontFamily: SANS, fontWeight: 500, marginTop: 2 },
+  loginLabel: { fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: C.sub, fontFamily: SANS, textTransform: "uppercase" },
+  input: { background: C.tile, border: `1px solid ${C.line}`, borderRadius: 4, padding: "11px 14px", fontFamily: SANS, fontSize: 14, color: C.ink, outline: "none", width: "100%", boxSizing: "border-box", fontWeight: 500, ...TAB },
 
-  // Lobby
-  wrap: { minHeight: "100vh", background: "#0a0f1a", fontFamily: FONT, color: "#f8fafc", paddingBottom: 120 },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", borderBottom: "1px solid #1e293b", background: "#0a0f1a", position: "sticky", top: 0, zIndex: 50 },
-  headerLeft: { display: "flex", alignItems: "center", gap: 10 },
-  headerIcon: { fontSize: 22 },
-  headerLogo: { fontFamily: DISPLAY, fontSize: 16, fontWeight: 900, letterSpacing: 1, color: "#f8fafc" },
-  headerRight: { display: "flex", alignItems: "center", gap: 10 },
-  balancePill: { display: "flex", alignItems: "center", gap: 2, background: "#1e293b", padding: "6px 12px", borderRadius: 20 },
-  balanceDollar: { fontSize: 11, color: "#64748b" },
-  balanceAmt: { fontFamily: DISPLAY, fontSize: 18, fontWeight: 800, color: "#fbbf24" },
-  avatarBtn: { width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg, #6366f1, #8b5cf6)", color: "#fff", border: "none", cursor: "pointer", fontFamily: DISPLAY, fontSize: 16, fontWeight: 800 },
-  headerBanner: { padding: "10px 16px", background: "#1e293b", color: "#fbbf24", fontSize: 13, textAlign: "center", borderBottom: "1px solid #334155" },
+  // Buttons (BOOKD)
+  btnPrimary: { background: C.ink, color: "#fff", border: "none", borderRadius: 4, padding: "11px 16px", fontFamily: SANS, fontSize: 13, fontWeight: 800, cursor: "pointer", letterSpacing: 0.4, textTransform: "uppercase" },
+  btnAccent: { background: C.accent, color: "#fff", border: "none", borderRadius: 4, padding: "8px 14px", fontFamily: SANS, fontSize: 12, fontWeight: 800, cursor: "pointer", letterSpacing: 0.4, textTransform: "uppercase" },
+  btnGold: { background: C.gold, color: C.ink, border: "none", borderRadius: 4, padding: "8px 14px", fontFamily: SANS, fontSize: 12, fontWeight: 800, cursor: "pointer", letterSpacing: 0.4, textTransform: "uppercase" },
+  btnPos: { background: C.pos, color: "#fff", border: "none", borderRadius: 4, padding: "8px 14px", fontFamily: SANS, fontSize: 12, fontWeight: 700, cursor: "pointer", letterSpacing: 0.3, textAlign: "left" },
+  btnSecondary: { background: "transparent", color: C.ink, border: `1px solid ${C.line}`, borderRadius: 4, padding: "7px 12px", fontFamily: SANS, fontSize: 12, fontWeight: 700, cursor: "pointer", letterSpacing: 0.3, textTransform: "uppercase" },
+  btnGhost: { background: "transparent", color: C.sub, border: "none", padding: "6px 4px", fontFamily: SANS, fontSize: 13, cursor: "pointer", fontWeight: 500 },
 
-  notify: { position: "fixed", top: 70, left: "50%", transform: "translateX(-50%)", padding: "10px 16px", background: "#1e293b", color: "#f8fafc", borderRadius: 10, fontSize: 13, zIndex: 200, boxShadow: "0 4px 12px rgba(0,0,0,0.3)", border: "1px solid #334155" },
+  // Eyebrow / utility
+  eyebrow: { fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: C.sub, fontFamily: SANS, textTransform: "uppercase" },
+  sectionHeader: { fontSize: 13, fontWeight: 800, letterSpacing: 1.2, color: C.sub, fontFamily: SANS, textTransform: "uppercase", marginBottom: 12 },
 
-  tabs: { display: "flex", background: "#0a0f1a", borderBottom: "1px solid #1e293b", padding: "0 8px", position: "sticky", top: 64, zIndex: 49, overflowX: "auto" },
-  tab: { background: "transparent", border: "none", borderBottom: "2px solid transparent", color: "#64748b", padding: "12px 14px", fontFamily: FONT, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", letterSpacing: 0.3 },
-  tabActive: { color: "#f8fafc", borderBottom: "2px solid #6366f1" },
+  // Lobby layout
+  lobbyWrap: { minHeight: "100vh", background: C.bg, fontFamily: SANS, color: C.ink, display: "flex" },
+  sidebar: { width: 200, background: C.rail, borderRight: `1px solid ${C.line}`, display: "flex", flexDirection: "column", padding: "16px 0", flexShrink: 0, position: "sticky", top: 0, height: "100vh", overflowY: "auto" },
+  brandRow: { display: "flex", alignItems: "center", gap: 10, padding: "0 16px 16px", borderBottom: `1px solid ${C.line}`, marginBottom: 4 },
+  brandBlock: { width: 24, height: 24, borderRadius: 4, background: `linear-gradient(135deg, ${C.accent} 0%, ${C.catSports} 100%)`, flexShrink: 0 },
+  brandText: { fontFamily: SANS, fontSize: 15, fontWeight: 800, letterSpacing: -0.4, color: C.ink },
 
-  subTabs: { display: "flex", borderBottom: "1px solid #1e2d3d", background: "#07111a", padding: "0 12px", position: "sticky", top: 105, zIndex: 48 },
-  subTab: { background: "transparent", border: "none", borderBottom: "2px solid transparent", color: "#4a6280", padding: "8px 14px", fontFamily: FONT, fontSize: 11, fontWeight: 600, cursor: "pointer", letterSpacing: 0.3 },
-  subTabActive: { color: "#f8fafc", borderBottom: "2px solid #60a5fa" },
+  navItem: { display: "flex", alignItems: "center", gap: 8, padding: "7px 12px", margin: "0 8px 1px", borderRadius: 4, background: "transparent", border: "none", cursor: "pointer", fontFamily: SANS, width: "calc(100% - 16px)", textAlign: "left" },
+  navItemActive: { background: C.activeNav },
+  navDot: { width: 6, height: 6, borderRadius: "50%", flexShrink: 0 },
+  navLabel: { fontSize: 13, fontWeight: 600, color: C.ink, flex: 1, fontFamily: SANS },
+  navCount: { fontSize: 11, fontWeight: 700, color: C.sub, ...TAB },
+  catSquare: { width: 14, height: 14, borderRadius: 3, flexShrink: 0 },
 
-  content: { padding: 14 },
-  empty: { padding: 40, textAlign: "center" },
-  emptyText: { color: "#64748b", fontSize: 13 },
+  sidebarSpacer: { flex: 1 },
+  balanceCard: { background: C.tile, border: `1px solid ${C.line}`, borderRadius: 6, padding: 12, margin: 12, overflow: "hidden" },
+  balanceLabel: { fontSize: 10, fontWeight: 800, letterSpacing: 1.2, color: C.sub, fontFamily: SANS, textTransform: "uppercase" },
+  balanceAmt: { fontFamily: SANS, fontSize: 22, fontWeight: 800, color: C.pos, ...TAB, letterSpacing: -0.6, marginTop: 2 },
 
-  marketCard: { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: 14, marginBottom: 12 },
-  marketTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  leagueTag: { fontSize: 9, fontWeight: 800, letterSpacing: 1.5, padding: "2px 8px", borderRadius: 4 },
-  maxBetTag: { fontSize: 10, fontWeight: 700, color: "#94a3b8", background: "#1e293b", padding: "2px 8px", borderRadius: 4 },
-  marketTitle: { fontFamily: DISPLAY, fontSize: 18, fontWeight: 800, color: "#f8fafc", margin: "0 0 4px", letterSpacing: 0.3 },
-  marketSubtitle: { fontSize: 11, color: "#64748b", margin: "0 0 10px" },
-  winnerBar: { padding: "8px 12px", background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 8, fontSize: 12, color: "#4ade80", textAlign: "center", marginBottom: 10, fontWeight: 600 },
+  main: { flex: 1, minWidth: 0, display: "flex", flexDirection: "column" },
+  topbar: { height: 52, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", borderBottom: `1px solid ${C.line}`, background: C.bg, position: "sticky", top: 0, zIndex: 40, gap: 12 },
+  topbarLeft: { flex: 1, minWidth: 0, display: "flex", alignItems: "center" },
+  topbarRight: { display: "flex", alignItems: "center", gap: 10, flexShrink: 0 },
+  bannerChip: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: C.gold, fontWeight: 700, padding: "6px 12px", background: "rgba(255,184,0,0.10)", border: `1px solid ${C.gold}`, borderRadius: 4 },
 
-  futureGrid: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 6 },
-  futOpt: { display: "flex", flexDirection: "column", padding: "10px 12px", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, cursor: "pointer", position: "relative", overflow: "hidden" },
-  futOptSel: { background: "#6366f1", borderColor: "#6366f1" },
-  futOptDis: { opacity: 0.4, cursor: "not-allowed" },
-  futOptLabel: { fontSize: 12, color: "#cbd5e1", fontWeight: 600, marginBottom: 2 },
-  futOptOdds: { fontFamily: DISPLAY, fontSize: 16, fontWeight: 800, letterSpacing: 0.3 },
-  futOptBar: { position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "#0a0f1a" },
-  futOptBarFill: { height: "100%", background: "linear-gradient(90deg, #6366f1, #8b5cf6)" },
+  segmented: { display: "flex", border: `1px solid ${C.line}`, borderRadius: 4, background: C.tile, overflow: "hidden" },
+  segBtn: { background: "transparent", border: "none", padding: "8px 14px", fontFamily: SANS, fontSize: 13, color: C.sub, fontWeight: 600, cursor: "pointer", letterSpacing: 0.2 },
+  segBtnActive: { background: C.ink, color: "#fff" },
 
-  // Bet slip
-  slipBar: { position: "fixed", bottom: 0, left: 0, right: 0, background: "#0f172a", borderTop: "1px solid #1e293b", padding: "10px 12px", zIndex: 100, maxHeight: "50vh", overflowY: "auto" },
+  notify: { position: "fixed", top: 64, left: "50%", transform: "translateX(-50%)", padding: "10px 16px", background: C.ink, color: "#fff", borderRadius: 4, fontSize: 13, fontWeight: 600, zIndex: 200, boxShadow: "0 8px 24px rgba(20,30,80,.14)", fontFamily: SANS },
+
+  content: { padding: 16, flex: 1, paddingBottom: 280 },
+  empty: { padding: "60px 20px", textAlign: "center", background: C.tile, border: `1px solid ${C.line}`, borderRadius: 8 },
+
+  // Event card
+  eventCard: { background: C.tile, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 12, overflow: "hidden" },
+  eventTop: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6, gap: 8, flexWrap: "wrap" },
+  catBadge: { fontSize: 9, fontWeight: 800, letterSpacing: 0.8, padding: "2px 6px", borderRadius: 3, color: "#fff", textTransform: "uppercase", fontFamily: SANS, lineHeight: 1.4 },
+  metaChip: { fontSize: 11, fontWeight: 700, color: C.sub, background: C.rail, padding: "3px 8px", borderRadius: 4, fontFamily: SANS, ...TAB },
+  eventTitle: { fontFamily: SANS, fontSize: 18, fontWeight: 800, color: C.ink, margin: "0 0 4px", letterSpacing: -0.4 },
+  eventSub: { fontSize: 13, color: C.sub, margin: "0 0 12px", fontWeight: 500 },
+
+  teamRow: { display: "flex", alignItems: "center", gap: 8 },
+  teamName: { fontSize: 13, color: C.ink2, fontWeight: 600 },
+
+  winnerBar: { padding: "8px 12px", background: C.tilePos, border: `1px solid ${C.linePos}`, borderRadius: 4, fontSize: 13, color: C.pos, marginBottom: 12, fontWeight: 700, letterSpacing: -0.2 },
+
+  // Future grid (multiple options)
+  futureGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))", gap: 8 },
+  futOpt: { display: "flex", flexDirection: "column", padding: "10px 12px", background: C.tile, border: `1px solid ${C.line}`, borderRadius: 6, cursor: "pointer", position: "relative", overflow: "hidden", minHeight: 56, justifyContent: "center" },
+  futOptLabel: { fontSize: 11, color: C.sub, fontWeight: 500, marginBottom: 2 },
+  futOptOdds: { fontFamily: SANS, fontSize: 14, fontWeight: 700, ...TAB, letterSpacing: -0.2 },
+  futOptBar: { position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: C.rail },
+  futOptBarFill: { height: "100%", background: C.ink2 },
+
+  // Bet slip (floating bottom-right)
+  slip: { position: "fixed", bottom: 16, right: 16, width: 280, background: C.tile, border: `1.5px solid ${C.accent}`, borderRadius: 6, zIndex: 100, maxHeight: "80vh", overflowY: "auto", boxShadow: "0 8px 24px rgba(20,30,80,.14)", overflow: "hidden" },
+  slipInner: { padding: 12 },
   slipHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 },
-  slipClear: { background: "transparent", border: "1px solid #334155", color: "#94a3b8", padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer", fontFamily: FONT },
-  slipLeg: { display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "#1e293b", borderRadius: 8, marginBottom: 6 },
-  slipStake: { width: 70, height: 32, padding: "4px 8px", background: "#0f172a", border: "1px solid #334155", color: "#f8fafc", borderRadius: 6, fontFamily: FONT, fontSize: 13, textAlign: "center", outline: "none", boxSizing: "border-box" },
-  slipX: { background: "transparent", border: "none", color: "#64748b", cursor: "pointer", fontSize: 14, padding: "0 4px" },
-  slipFooter: { marginTop: 6 },
-  placeBtn: { width: "100%", background: "#22c55e", color: "#0a0f1a", border: "none", borderRadius: 8, padding: "12px 16px", fontFamily: FONT, fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: 0.3 },
+  slipLeg: { display: "flex", alignItems: "center", gap: 6, padding: "8px 10px", background: C.rail, borderRadius: 4, marginBottom: 6 },
+  slipStake: { width: 60, height: 28, padding: "4px 8px", background: C.tile, border: `1px solid ${C.line}`, color: C.ink, borderRadius: 4, fontFamily: SANS, fontSize: 13, textAlign: "center", outline: "none", boxSizing: "border-box", ...TAB, fontWeight: 600 },
+  slipX: { background: "transparent", border: "none", color: C.sub, cursor: "pointer", fontSize: 16, padding: "0 4px", lineHeight: 1, fontWeight: 700 },
+  slipWarn: { padding: "8px 10px", background: C.tileHot, border: `1px solid ${C.lineAccent}`, color: C.accent, fontSize: 12, textAlign: "center", borderRadius: 4, marginBottom: 6, fontWeight: 600 },
 
   // My bets
-  betCard: { background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: 12, marginBottom: 10 },
-  betCardTop: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  betType: { fontSize: 10, fontWeight: 800, letterSpacing: 1.2 },
-  betLine: { fontSize: 14, color: "#f8fafc", margin: "0 0 2px" },
-  betMarket: { fontSize: 11, color: "#94a3b8", margin: 0 },
-  betBottom: { display: "flex", justifyContent: "space-between", marginTop: 8, fontSize: 12, fontWeight: 600 },
+  betCard: { background: C.tile, border: `1px solid ${C.line}`, borderRadius: 8, padding: 14, marginBottom: 10 },
+  betLine: { fontSize: 14, color: C.ink, margin: "0 0 2px", fontWeight: 600, letterSpacing: -0.2 },
+  betMarket: { fontSize: 13, color: C.sub, margin: 0, fontWeight: 500 },
 
   // Leaderboard
-  boardRow: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: "#0f172a", border: "1px solid #1e293b", borderRadius: 10, marginBottom: 6 },
-  boardRowMe: { borderColor: "#6366f1", background: "rgba(99,102,241,0.05)" },
-  boardRank: { fontFamily: DISPLAY, fontSize: 16, fontWeight: 800, color: "#fbbf24", width: 32 },
-  boardName: { flex: 1, fontSize: 14, fontWeight: 600, color: "#f8fafc" },
-  boardTotal: { fontFamily: DISPLAY, fontSize: 16, fontWeight: 800, color: "#4ade80" },
+  boardRow: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: C.tile, border: `1px solid ${C.line}`, borderRadius: 6, marginBottom: 6 },
+  boardRowMe: { borderColor: C.ink, background: C.activeNav },
+  boardRank: { fontFamily: SANS, fontSize: 14, fontWeight: 800, color: C.gold, width: 32, ...TAB, letterSpacing: -0.2 },
+  boardName: { flex: 1, fontSize: 14, fontWeight: 700, color: C.ink, letterSpacing: -0.2 },
+  boardTotal: { fontFamily: SANS, fontSize: 18, fontWeight: 800, color: C.pos, ...TAB, letterSpacing: -0.4 },
 
   // Admin
-  adminWrap: { minHeight: "100vh", background: "#f8fafc", fontFamily: FONT, color: "#0f172a" },
-  adminHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 16px", background: "#ffffff", borderBottom: "1px solid #e2e8f0", position: "sticky", top: 0, zIndex: 50 },
-  backBtn: { background: "transparent", border: "1px solid #e2e8f0", color: "#64748b", padding: "6px 12px", borderRadius: 8, cursor: "pointer", fontFamily: FONT, fontSize: 12 },
-  adminTitle: { fontFamily: DISPLAY, fontSize: 16, fontWeight: 900, letterSpacing: 1.5 },
-  adminTabs: { display: "flex", borderBottom: "1px solid #e2e8f0", background: "#ffffff", padding: "0 8px", overflowX: "auto", position: "sticky", top: 56, zIndex: 49 },
-  adminTab: { background: "transparent", border: "none", borderBottom: "2px solid transparent", color: "#64748b", padding: "10px 14px", fontFamily: FONT, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" },
-  adminTabActive: { color: "#0f172a", borderBottom: "2px solid #6366f1" },
-  adminContent: { padding: 16 },
-  adminH3: { margin: "0 0 14px", fontSize: 14, fontWeight: 700, color: "#0f172a", letterSpacing: 0.5 },
-  adminMarketCard: { background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 10, padding: 12, marginBottom: 10 },
-  adminMarketTitle: { fontSize: 14, fontWeight: 700, color: "#0f172a", margin: "0 0 2px" },
-  adminMarketSubtitle: { fontSize: 11, color: "#64748b", margin: "0 0 8px" },
-  settleOptions: { display: "flex", flexDirection: "column", gap: 6, marginTop: 8 },
-  settleBtn: { background: "#f0fdf4", border: "1px solid #bbf7d0", color: "#16a34a", padding: "8px 12px", borderRadius: 8, fontFamily: FONT, fontSize: 12, cursor: "pointer", fontWeight: 600 },
-  pauseBtn: { background: "#fffbeb", border: "1px solid #fde68a", color: "#d97706", padding: "5px 10px", borderRadius: 6, fontFamily: FONT, fontSize: 11, cursor: "pointer" },
-  winnerText: { fontSize: 13, color: "#16a34a", fontWeight: 700, margin: 0 },
-  playerRow: { padding: "10px 12px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: 10, marginBottom: 8 },
-  playerRank: { fontFamily: DISPLAY, fontSize: 14, fontWeight: 800, color: "#fbbf24" },
-  playerName: { fontSize: 13, fontWeight: 700, color: "#0f172a" },
-  miniBtn: { background: "#f8fafc", border: "1px solid #e2e8f0", color: "#0f172a", padding: "6px 10px", borderRadius: 6, fontFamily: FONT, fontSize: 11, cursor: "pointer", fontWeight: 500 },
-  formRow: { marginBottom: 12 },
-  formLabel: { display: "block", fontSize: 11, fontWeight: 700, letterSpacing: 1, color: "#64748b", marginBottom: 5 },
+  adminWrap: { minHeight: "100vh", background: C.bg, fontFamily: SANS, color: C.ink },
+  adminHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 16px", background: C.tile, borderBottom: `1px solid ${C.line}`, position: "sticky", top: 0, zIndex: 50 },
+  adminTitle: { fontFamily: SANS, fontSize: 15, fontWeight: 800, letterSpacing: -0.4, color: C.ink },
+  adminTabs: { display: "flex", background: C.tile, borderBottom: `1px solid ${C.line}`, padding: "0 8px", overflowX: "auto", position: "sticky", top: 49, zIndex: 49 },
+  adminTab: { background: "transparent", border: "none", borderBottom: "2px solid transparent", color: C.sub, padding: "10px 14px", fontFamily: SANS, fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", letterSpacing: 0.3 },
+  adminTabActive: { color: C.ink, borderBottom: `2px solid ${C.accent}` },
+  adminContent: { padding: 16, maxWidth: 920, margin: "0 auto" },
+  adminH3: { margin: "0 0 14px", fontSize: 15, fontWeight: 800, color: C.ink, letterSpacing: -0.3 },
+  adminCard: { background: C.tile, border: `1px solid ${C.line}`, borderRadius: 8, padding: 16, marginBottom: 10, overflow: "hidden" },
+  adminCardTitle: { fontSize: 14, fontWeight: 800, color: C.ink, margin: "0 0 2px", letterSpacing: -0.3 },
+  adminCardSub: { fontSize: 13, color: C.sub, margin: 0, fontWeight: 500 },
+  statBox: { display: "flex", alignItems: "center", padding: "12px 14px", background: C.tile, border: `1px solid ${C.line}`, borderRadius: 6, marginBottom: 16 },
+  formRow: { marginBottom: 14 },
+  formLabel: { display: "block", fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: C.sub, marginBottom: 5, textTransform: "uppercase", fontFamily: SANS },
 };
 
-// Grouped game card cell styles
+// Tile-grid styles (event row: ML | Spread | O/U)
 const GS = {
   gridWrap: { display: "flex", flexDirection: "column", gap: 4 },
-  headerRow: { display: "flex", gap: 6, padding: "0 2px" },
-  colHeader: { flex: 1, fontSize: 9, fontWeight: 700, letterSpacing: 1.5, color: "#4a6280", textAlign: "center", padding: "0 2px", textTransform: "uppercase" },
-  row: { display: "flex", gap: 6 },
-  cell: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "10px 8px", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, cursor: "pointer", minHeight: 56, position: "relative", overflow: "hidden" },
-  cellSelected: { background: "#6366f1", borderColor: "#6366f1" },
-  cellDisabled: { opacity: 0.4, cursor: "not-allowed" },
-  cellLabel: { fontSize: 11, color: "#cbd5e1", fontWeight: 500, marginBottom: 4, textAlign: "center", lineHeight: 1.2 },
-  cellOdds: { fontFamily: DISPLAY, fontSize: 18, fontWeight: 800, letterSpacing: 0.3 },
-  cellBar: { position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: "#0a0f1a" },
-  cellBarFill: { height: "100%", background: "linear-gradient(90deg, #6366f1, #8b5cf6)" },
-  winnerBar: { padding: "6px 10px", background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 6, fontSize: 11, color: "#4ade80", textAlign: "center", marginBottom: 8, fontWeight: 600 },
+  headerRow: { display: "flex", gap: 8, padding: "0 2px" },
+  colHeader: { flex: 1, fontSize: 9, fontWeight: 800, letterSpacing: 0.8, color: C.sub, textAlign: "center", padding: "0 2px", textTransform: "uppercase", fontFamily: SANS },
+  row: { display: "flex", gap: 8 },
+  cell: { flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "10px 8px", background: C.tile, border: `1px solid ${C.line}`, borderRadius: 6, cursor: "pointer", minHeight: 56, position: "relative", overflow: "hidden", fontFamily: SANS },
+  cellEmpty: { flex: 1, minHeight: 56 },
+  cellLabel: { fontSize: 10, color: C.sub, fontWeight: 500, marginBottom: 4, textAlign: "center", lineHeight: 1.2, fontFamily: SANS },
+  cellOdds: { fontFamily: SANS, fontSize: 13, fontWeight: 700, ...TAB, letterSpacing: -0.2 },
+  cellBar: { position: "absolute", bottom: 0, left: 0, right: 0, height: 2, background: C.rail },
+  cellBarFill: { height: "100%", background: C.ink2 },
 };
