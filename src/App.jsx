@@ -142,7 +142,7 @@ function PinPad({ value, onChange, label, sublabel, error }) {
 }
 
 
-// ── Design tokens (BOOKD) ────────────────────────────────────────────────
+// ── Design tokens ────────────────────────────────────────────────
 const C = {
   bg: "#FBFAFF", rail: "#EEF0FA", tile: "#FFFFFF",
   tileHot: "#FFE9EB", tilePos: "#E2F7E9",
@@ -207,6 +207,7 @@ export default function App() {
   const [headerInput, setHeaderInput] = useState("");
   const [editMaxBets, setEditMaxBets] = useState({});
   const [editOdds, setEditOdds] = useState({});
+  const [editSubs, setEditSubs] = useState({});
 
   // ── Storage helpers ─────────
   async function saveUsers(u) { setUsers(u); await storageSet("mln_users", u); }
@@ -676,6 +677,10 @@ export default function App() {
     const upd = m => m.id !== marketId ? m : { ...m, options: (m.options || []).map(o => o.id === optId ? { ...o, odds: newOdds } : o) };
     await saveMarkets({ games: (markets.games || []).map(upd), futures: (markets.futures || []).map(upd) });
   }
+  async function updateMarketSubtitle(marketId, newSubtitle) {
+    const upd = m => m.id === marketId ? { ...m, subtitle: newSubtitle } : m;
+    await saveMarkets({ games: (markets.games || []).map(upd), futures: (markets.futures || []).map(upd) });
+  }
 
   // ── Render helpers (plain functions, NOT components-in-map) ──
   function renderCell(opt, market, label) {
@@ -742,8 +747,8 @@ export default function App() {
           <div style={S.loginLogoRow}>
             <div style={S.loginLogoBlock} />
             <div>
-              <div style={S.loginLogoTitle}>BOOKD</div>
-              <div style={S.loginLogoSub}>Custom bets between friends</div>
+              <div style={S.loginLogoTitle}>MLN BET</div>
+              <div style={S.loginLogoSub}>Fake money. Real bragging rights.</div>
             </div>
           </div>
           {loginStep === "name" && (<>
@@ -1082,10 +1087,50 @@ export default function App() {
           {adminTab === "edit" && (
             <div>
               <h3 style={S.adminH3}>Edit Markets</h3>
-              {allMarkets.map(m => (
+              {allMarkets.map(m => {
+                const currentSub = editSubs[m.id] !== undefined ? editSubs[m.id] : m.subtitle;
+                const previewMeta = leagueMeta(currentSub);
+                return (
                 <div key={m.id} style={S.adminCard}>
+                  <div style={{ height: 3, background: leagueMeta(m.subtitle).color, marginLeft: -16, marginRight: -16, marginTop: -16, marginBottom: 10 }} />
                   <p style={S.adminCardTitle}>{m.title}</p>
-                  <p style={S.adminCardSub}>{m.subtitle} — <span style={{ color: m.status === "open" ? C.pos : m.status === "paused" ? C.gold : C.sub, fontWeight: 700 }}>{m.status}</span></p>
+                  <p style={S.adminCardSub}>
+                    <span style={{ ...S.catBadge, background: leagueMeta(m.subtitle).color, marginRight: 6 }}>{leagueMeta(m.subtitle).tag}</span>
+                    {m.subtitle} — <span style={{ color: m.status === "open" ? C.pos : m.status === "paused" ? C.gold : C.sub, fontWeight: 700 }}>{m.status}</span>
+                  </p>
+
+                  {/* Tag / subtitle editor */}
+                  <div style={{ marginTop: 10, marginBottom: 10, padding: 10, background: C.rail, borderRadius: 4 }}>
+                    <label style={{ ...S.formLabel, marginBottom: 6 }}>TAG / SUBTITLE</label>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 6 }}>
+                      {["Lunar League", "Galactic League", "ToOS", "Championship", "Season Future", "Custom Market"].map(preset => (
+                        <button key={preset} style={{ ...S.btnSecondary, fontSize: 11, padding: "5px 10px" }}
+                          onClick={() => setEditSubs({ ...editSubs, [m.id]: preset })}>
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                      <input style={{ ...S.input, flex: 1 }} placeholder="e.g., Lunar League - Semifinal"
+                        value={currentSub}
+                        onChange={e => setEditSubs({ ...editSubs, [m.id]: e.target.value })} />
+                      <span style={{ ...S.catBadge, background: previewMeta.color, flexShrink: 0 }}>{previewMeta.tag}</span>
+                      <button style={S.btnSecondary}
+                        disabled={editSubs[m.id] === undefined || editSubs[m.id] === m.subtitle}
+                        onClick={() => {
+                          const v = (editSubs[m.id] || "").trim();
+                          if (v) {
+                            updateMarketSubtitle(m.id, v);
+                            const ne = { ...editSubs }; delete ne[m.id]; setEditSubs(ne);
+                            notify("Tag updated");
+                          }
+                        }}>SAVE</button>
+                    </div>
+                    <div style={{ fontSize: 11, color: C.sub, marginTop: 4, fontWeight: 500 }}>
+                      Tag derives from subtitle: "lunar" → LUNAR, "galactic" → GALACTIC, "toos"/"championship" → ToOS.
+                    </div>
+                  </div>
+
                   <div style={{ display: "flex", gap: 6, marginTop: 8, marginBottom: 8, flexWrap: "wrap" }}>
                     <input style={{ ...S.input, width: 110 }} type="number" placeholder="Max bet"
                       value={editMaxBets[m.id] !== undefined ? editMaxBets[m.id] : (m.maxBet || "")}
@@ -1118,7 +1163,7 @@ export default function App() {
                     DELETE MARKET
                   </button>
                 </div>
-              ))}
+              );})}
             </div>
           )}
 
@@ -1181,7 +1226,7 @@ export default function App() {
       <aside style={S.sidebar}>
         <div style={S.brandRow}>
           <div style={S.brandBlock} />
-          <div style={S.brandText}>BOOKD</div>
+          <div style={S.brandText}>MLN BET</div>
         </div>
 
         <div style={{ ...S.eyebrow, padding: "16px 16px 6px" }}>YOUR BETS</div>
@@ -1521,7 +1566,7 @@ export default function App() {
   );
 }
 
-// ── Styles (BOOKD) ──────────────────────────────────────────────────────
+// ── Styles ──────────────────────────────────────────────────────
 const S = {
   // Login
   loginWrap: { minHeight: "100vh", background: C.bg, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: SANS },
@@ -1533,7 +1578,7 @@ const S = {
   loginLabel: { fontSize: 11, fontWeight: 800, letterSpacing: 1.2, color: C.sub, fontFamily: SANS, textTransform: "uppercase" },
   input: { background: C.tile, border: `1px solid ${C.line}`, borderRadius: 4, padding: "11px 14px", fontFamily: SANS, fontSize: 14, color: C.ink, outline: "none", width: "100%", boxSizing: "border-box", fontWeight: 500, ...TAB },
 
-  // Buttons (BOOKD)
+  // Buttons
   btnPrimary: { background: C.ink, color: "#fff", border: "none", borderRadius: 4, padding: "11px 16px", fontFamily: SANS, fontSize: 13, fontWeight: 800, cursor: "pointer", letterSpacing: 0.4, textTransform: "uppercase" },
   btnAccent: { background: C.accent, color: "#fff", border: "none", borderRadius: 4, padding: "8px 14px", fontFamily: SANS, fontSize: 12, fontWeight: 800, cursor: "pointer", letterSpacing: 0.4, textTransform: "uppercase" },
   btnGold: { background: C.gold, color: C.ink, border: "none", borderRadius: 4, padding: "8px 14px", fontFamily: SANS, fontSize: 12, fontWeight: 800, cursor: "pointer", letterSpacing: 0.4, textTransform: "uppercase" },
